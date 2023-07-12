@@ -35,6 +35,7 @@ api.put("/destroy", function(request) {
         "where": { "user": request.body.user, "index": request.body.destroyed }
     })
 })
+api.use(express.static(__dirname + "/build"))
 api.use(function(request, response) {
     response.sendFile(__dirname + "/build/")
 })
