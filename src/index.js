@@ -1,26 +1,29 @@
 import react from "react"
 import reactDOM from "react-dom/client"
 import axios from "axios"
-let slash
-let user = ""
-let items
-let counter
-let state = {}
 if (window.location.pathname === "/") {
   window.history.replaceState(undefined, undefined, "user")
 }
-for (let index in window.location.pathname) {
-  if (window.location.pathname[index] === "/") {
-    if (slash) {
-      break
-    } else {
-      slash = true
-    }
-  }
-  user += window.location.pathname[index]
-}
+let path = decodeURI(window.location.pathname).split("/")
+let user = path[1]
+let map = []
+let step = 2
+let parent = "0"
+let redirect = user
+let items = [[]]
+let next
+let state = {}
+let destroyed
 function render(component) {
   state[component][1]({})
+}
+function destroy(parent, index) {
+  for (let child in items[index]) {
+    destroy(index, child)
+  }
+  delete items[index]
+  delete items[parent][index]
+  destroyed.push(index)
 }
 function Bookmark(props) {
   let editing = react.useState()
@@ -33,28 +36,28 @@ function Bookmark(props) {
       if (!(address.current.value.startsWith("https://") || address.current.value.startsWith("http://"))) {
         address.current.value = "https://" + address.current.value
       }
-      items[props.index].address = address.current.value
-      items[props.index].name = name.current.value
-      items[props.index].description = description.current.value
-      axios.put("/item", items[props.index])
+      items[parent][props.index].address = address.current.value
+      items[parent][props.index].name = name.current.value
+      items[parent][props.index].description = description.current.value
+      axios.put("/update", items[parent][props.index])
       editing[1]()
     }}>
-      <input ref = {address} defaultValue = {items[props.index].address} placeholder = {"address"} />
-      <input ref = {name} defaultValue = {items[props.index].name} placeholder = {"name"} />
-      <input ref = {description} defaultValue = {items[props.index].description} placeholder = {"description"} />
+      <input ref = {address} defaultValue = {items[parent][props.index].address} placeholder = {"address"} />
+      <input ref = {name} defaultValue = {items[parent][props.index].name} placeholder = {"name"} />
+      <input ref = {description} defaultValue = {items[parent][props.index].description} placeholder = {"description"} />
       <button>
         done
       </button>
     </form>
   }
   return <>
-    <a className = {"item"} target = {"_blank"} href = {items[props.index].address} style = {{ "textDecoration": "none", "color": "black" }}>
-      <img src = {"https://www.google.com/s2/favicons?domain=" + items[props.index].address} style = {{ "height": "16px", "width": "16px" }} />
+    <a className = {"item"} target = {"_blank"} href = {items[parent][props.index].address} style = {{ "textDecoration": "none", "color": "black" }}>
+      <img src = {"https://www.google.com/s2/favicons?domain=" + items[parent][props.index].address} style = {{ "height": "16px", "width": "16px" }} />
       <div style = {{ "fontWeight": "bold" }}>
-        {items[props.index].name}
+        {items[parent][props.index].name}
       </div>
       <div>
-        {items[props.index].description}
+        {items[parent][props.index].description}
       </div>
     </a>
     <button onClick = {function() {
@@ -71,30 +74,39 @@ function Folder(props) {
   if (editing[0]) {
     return <form className = {"item"} onSubmit = {function(event) {
       event.preventDefault()
-      items[props.index].name = name.current.value
-      items[props.index].description = description.current.value
-      axios.put("/item", items[props.index])
+      name.current.value = name.current.value.replaceAll(/[/?]/g, "")
+      for (let index in items[parent]) {
+        if (items[parent][index].name === name.current.value) {
+          alert("Folder names must be unique.")
+          name.current.focus()
+          return
+        }
+      }
+      items[parent][props.index].name = name.current.value
+      items[parent][props.index].description = description.current.value
+      axios.put("/update", items[parent][props.index])
       editing[1]()
     }}>
-      <input ref = {name} defaultValue = {items[props.index].name} placeholder = {"name"} />
-      <input ref = {description} defaultValue = {items[props.index].description} placeholder = {"description"} />
+      <input ref = {name} defaultValue = {items[parent][props.index].name} placeholder = {"name"} />
+      <input ref = {description} defaultValue = {items[parent][props.index].description} placeholder = {"description"} />
       <button>
         done
       </button>
     </form>
   }
-  let path = window.location.pathname + items[props.index].name
+  let path = window.location.pathname + "/" + items[parent][props.index].name
   return <>
     <a className = {"item"} href = {path} onClick = {function(event) {
       event.preventDefault()
+      parent = items[parent][props.index].index
       window.history.pushState(undefined, undefined, path)
       render("Main")
     }} style = {{ "textDecoration": "none", "color": "black" }}>
       <div style = {{ "fontWeight": "bold" }}>
-        {items[props.index].name}
+        {items[parent][props.index].name}
       </div>
       <div>
-        {items[props.index].description}
+        {items[parent][props.index].description}
       </div>
     </a>
     <button onClick = {function() {
@@ -105,7 +117,7 @@ function Folder(props) {
   </>
 }
 function Item(props) {
-  if (items[props.index].address) {
+  if (items[parent][props.index].address) {
     return <Bookmark index = {props.index} />
   }
   return <Folder index = {props.index} />
@@ -113,19 +125,18 @@ function Item(props) {
 function Main() {
   state.Main = react.useState()
   let folder = []
-  for (let index in items) {
-    if (items[index].path === window.location.pathname) {
-      folder.push(<div key = {index} style = {{ "position": "relative" }}>
-        <Item index = {index} />
-        <button onClick = {function() {
-          axios.delete("/item/" + items[index].index)
-          delete items[index]
-          render("Main")
-        }} style = {{ "position": "absolute", "top": "16px", "right": "16px" }}>
-          delete
-        </button>
-      </div>)
-    }
+  for (let index in items[parent]) {
+    folder.push(<div key = {index} style = {{ "position": "relative" }}>
+      <Item index = {index} />
+      <button onClick = {function() {
+        destroyed = []
+        destroy(parent, index)
+        axios.put("/destroy", { "user": user, "destroyed": destroyed })
+        render("Main")
+      }} style = {{ "position": "absolute", "top": "16px", "right": "16px" }}>
+        delete
+      </button>
+    </div>)
   }
   return <>
     {folder}
@@ -143,8 +154,8 @@ function Add() {
       if (!(bookmarkAddress.current.value.startsWith("https://") || bookmarkAddress.current.value.startsWith("http://"))) {
         bookmarkAddress.current.value = "https://" + bookmarkAddress.current.value
       }
-      items[++counter] = { "index": counter, "path": window.location.pathname, "name": bookmarkName.current.value, "description": bookmarkDescription.current.value, "address": bookmarkAddress.current.value }
-      axios.post("/item", items[counter])
+      items[parent][next] = { "user": user, "index": next, "parent": parent, "name": bookmarkName.current.value, "description": bookmarkDescription.current.value, "address": bookmarkAddress.current.value }
+      axios.post("/item", items[parent][next++])
       bookmarkAddress.current.blur()
       bookmarkName.current.blur()
       bookmarkDescription.current.blur()
@@ -162,8 +173,17 @@ function Add() {
     </form>
     <form className = {"item"} onSubmit = {function(event) {
       event.preventDefault()
-      items[++counter] = { "index": counter, "path": window.location.pathname, "name": folderName.current.value, "description": folderDescription.current.value }
-      axios.post("/item", items[counter])
+      folderName.current.value = folderName.current.value.replaceAll(/[/?]/g, "")
+      for (let index in items[parent]) {
+        if (items[parent][index].name === folderName.current.value) {
+          alert("Folder names must be unique.")
+          folderName.current.focus()
+          return
+        }
+      }
+      items[parent][next] = { "user": user, "index": next, "parent": parent, "name": folderName.current.value, "description": folderDescription.current.value }
+      items[next] = []
+      axios.post("/item", items[parent][next++])
       folderName.current.blur()
       folderDescription.current.blur()
       folderName.current.value = ""
@@ -178,13 +198,21 @@ function Add() {
     </form>
   </>
 }
-axios.get("/item" + user).then(function(response) {
-  items = response.data
-  if (items[0]) {
-    counter = items[items.length - 1].index
-  } else {
-    counter = -1
+axios.get("/item/" + user).then(function(response) {
+  for (let index in response.data) {
+    map[response.data[index].index] = true
+    if (!response.data[index].address) {
+      if (response.data[index].name === path[step] && response.data[index].parent === parent) {
+        redirect += "/" + response.data[index].name
+        parent = response.data[index].index
+        ++step
+      }
+      items[response.data[index].index] = []
+    }
+    items[response.data[index].parent][response.data[index].index] = response.data[index]
   }
+  next = map.length
+  window.history.replaceState(undefined, undefined, "/" + redirect)
   reactDOM.createRoot(document.querySelector("div")).render(<react.StrictMode>
     <Main />
     <Add />

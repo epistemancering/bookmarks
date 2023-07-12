@@ -9,36 +9,32 @@ let database = new sequelize(require("./secrets").key, {
 let schema = {
     "users": database.define("users", { "name": sequelize.DataTypes.TEXT, "password": sequelize.DataTypes.TEXT }),
     "shares": database.define("shares", { "user": sequelize.DataTypes.TEXT, "item": sequelize.DataTypes.DECIMAL }),
-    "items": database.define("items", { "index": sequelize.DataTypes.DECIMAL, "path": sequelize.DataTypes.TEXT, "order": sequelize.DataTypes.DECIMAL, "name": sequelize.DataTypes.TEXT, "description": sequelize.DataTypes.TEXT, "address": sequelize.DataTypes.TEXT, "public": sequelize.DataTypes.BOOLEAN, "shortcut": sequelize.DataTypes.DECIMAL }),
+    "items": database.define("items", { "user": sequelize.DataTypes.TEXT, "index": sequelize.DataTypes.DECIMAL, "parent": sequelize.DataTypes.DECIMAL, "order": sequelize.DataTypes.DECIMAL, "name": sequelize.DataTypes.TEXT, "description": sequelize.DataTypes.TEXT, "address": sequelize.DataTypes.TEXT, "public": sequelize.DataTypes.BOOLEAN, "shortcut": sequelize.DataTypes.DECIMAL }),
     "tags": database.define("tags", { "name": sequelize.DataTypes.TEXT, "item": sequelize.DataTypes.DECIMAL })
 }
 let api = express()
 api.use(express.json())
 api.get("/item/:user", function(request, response) {
-    schema.items.findAll().then(function(selection) {
-        let items = []
-        for (let index in selection) {
-            if (selection[index].dataValues.path.startsWith("/" + request.params.user)) {
-                items[selection[index].dataValues.index] = selection[index].dataValues
-            }
-        }
-        response.send(items)
+    schema.items.findAll({
+        "order": ["index"],
+        "where": { "user": request.params.user }
+    }).then(function(selection) {
+        response.send(selection)
     })
 })
 api.post("/item", function(request) {
     schema.items.create(request.body)
 })
 api.put("/item", function(request) {
-    schema.items.update({ "address": request.body.address, "name": request.body.name, "description": request.body.description }, {
-        "where": { "index": request.body.index }
+    schema.items.update(request.body, {
+        "where": { "user": request.body.user, "index": request.body.index }
     })
 })
-api.delete("/item/:index", function(request) {
+api.put("/destroy", function(request) {
     schema.items.destroy({
-        "where": { "index": Number(request.params.index) }
+        "where": { "user": request.body.user, "index": request.body.destroyed }
     })
 })
-api.use(express.static(__dirname + "/build"))
 api.use(function(request, response) {
     response.sendFile(__dirname + "/build/")
 })
