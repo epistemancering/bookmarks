@@ -1,252 +1,395 @@
 import react from "react"
 import reactDOM from "react-dom/client"
 import axios from "axios"
-if (window.location.pathname === "/") {
-  window.history.replaceState(undefined, undefined, "user")
-}
-let path = decodeURI(window.location.pathname).split("/")
-let user = path[1]
-let map = []
-let step = 2
-let items = [[]]
-let next
+let users = {}
+let descriptions = {}
 let state = {}
+let user
+let authenticated
+let log
 let destroyed
 window.addEventListener("popstate", function() {
-  render("Main")
+  render("Browse")
 })
 function render(component) {
   state[component][1]({})
 }
-function destroy(parent, index) {
-  for (let child in items[index]) {
-    destroy(index, child)
+function destroy(parent) {
+  for (let index in users[window.history.state.user][parent].children) {
+    destroy(index)
   }
-  delete items[index]
-  delete items[parent][index]
-  destroyed.push(index)
+  destroyed.push(parent)
 }
-function Bookmark(props) {
-  let editing = react.useState()
+function Content(props) {
+  let editing = react.useState(props.create)
+  let name = react.useRef()
+  let description = react.useRef()
   let address = react.useRef()
-  let name = react.useRef()
-  let description = react.useRef()
+  let content
+  let button
   if (editing[0]) {
-    return <form className = {"item"} onSubmit = {function(event) {
-      event.preventDefault()
-      if (!(address.current.value.startsWith("https://") || address.current.value.startsWith("http://"))) {
-        address.current.value = "https://" + address.current.value
+    let bookmark
+    let input
+    if (props.create) {
+      bookmark = props.create === "bookmark"
+      content = <>
+        <input ref = {name} placeholder = {"name"} />
+        <input ref = {description} placeholder = {"description"} />
+      </>
+      if (bookmark) {
+        input = <input ref = {address} placeholder = {"address"} />
       }
-      items[window.history.state.current][props.index].address = address.current.value
-      items[window.history.state.current][props.index].name = name.current.value
-      items[window.history.state.current][props.index].description = description.current.value
-      axios.put("/update", items[window.history.state.current][props.index])
-      editing[1]()
-    }}>
-      <input ref = {address} defaultValue = {items[window.history.state.current][props.index].address} placeholder = {"address"} />
-      <input ref = {name} defaultValue = {items[window.history.state.current][props.index].name} placeholder = {"name"} />
-      <input ref = {description} defaultValue = {items[window.history.state.current][props.index].description} placeholder = {"description"} />
-      <button>
-        done
-      </button>
-    </form>
-  }
-  return <>
-    <a className = {"item"} target = {"_blank"} href = {items[window.history.state.current][props.index].address} style = {{ "textDecoration": "none", "color": "black" }}>
-      <img src = {"https://www.google.com/s2/favicons?domain=" + items[window.history.state.current][props.index].address} style = {{ "height": "16px", "width": "16px" }} />
-      <div style = {{ "fontWeight": "bold" }}>
-        {items[window.history.state.current][props.index].name}
-      </div>
-      <div>
-        {items[window.history.state.current][props.index].description}
-      </div>
-    </a>
-    <button onClick = {function() {
-      editing[1](true)
-    }} style = {{ "position": "absolute", "top": "16px", "right": "100px" }}>
-      edit
-    </button>
-  </>
-}
-function Folder(props) {
-  let editing = react.useState()
-  let name = react.useRef()
-  let description = react.useRef()
-  if (editing[0]) {
+      button = "create " + props.create
+    } else {
+      bookmark = users[window.history.state.user][props.index].address
+      if (bookmark) {
+        input = <input ref = {address} defaultValue = {users[window.history.state.user][props.index].address} placeholder = {"address"} />
+      }
+      content = <>
+        <input ref = {name} defaultValue = {users[window.history.state.user][props.index].name} placeholder = {"name"} />
+        <input ref = {description} defaultValue = {users[window.history.state.user][props.index].description} placeholder = {"description"} />
+      </>
+      button = "confirm"
+    }
     return <form className = {"item"} onSubmit = {function(event) {
       event.preventDefault()
-      name.current.value = name.current.value.replaceAll(/[/?\\]/g, "")
-      if (name.current.value) {
-        for (let index in items[window.history.state.current]) {
-          if (items[window.history.state.current][index].name === name.current.value && index !== props.index) {
+      if (bookmark) {
+        if (!(address.current.value.startsWith("https://") || address.current.value.startsWith("http://"))) {
+          address.current.value = "https://" + address.current.value
+        }
+      } else {
+        name.current.value = name.current.value.replaceAll(/[?/%\\]/g, "")
+        for (let index in window.history.state.children) {
+          if (users[window.history.state.user][index].name === name.current.value && (props.create || index !== props.index)) {
             alert("Folder names must be unique.")
             name.current.focus()
             return
           }
         }
-        items[window.history.state.current][props.index].name = name.current.value
-        items[window.history.state.current][props.index].description = description.current.value
-        axios.put("/update", items[window.history.state.current][props.index])
-        editing[1]()
+      }
+      if (name.current.value || bookmark) {
+        if (props.create) {
+          window.history.state.ancestors[window.history.state.index] = true
+          let item = { user: window.history.state.user, index: users[window.history.state.user].length, ancestors: window.history.state.ancestors, parent: window.history.state.index, name: name.current.value, description: description.current.value, address: address.current?.value, children: [] }
+          name.current.blur()
+          description.current.blur()
+          if (bookmark) {
+            address.current.blur()
+            address.current.value = ""
+          }
+          name.current.value = ""
+          description.current.value = ""
+          axios.post("/create", item)
+          users[window.history.state.user][window.history.state.index].children[users[window.history.state.user].length] = true
+          window.history.replaceState(users[window.history.state.user][window.history.state.index], undefined)
+          users[window.history.state.user].push(item)
+          render("Items")
+        } else {
+          users[window.history.state.user][props.index].name = name.current.value
+          users[window.history.state.user][props.index].description = description.current.value
+          users[window.history.state.user][props.index].address = address.current?.value
+          axios.put("/update", users[window.history.state.user][props.index])
+          editing[1]()
+        }
       } else {
         name.current.focus()
       }
     }}>
-      <input ref = {name} defaultValue = {items[window.history.state.current][props.index].name} placeholder = {"name"} />
-      <input ref = {description} defaultValue = {items[window.history.state.current][props.index].description} placeholder = {"description"} />
+      {content}
+      {input}
       <button>
-        done
+        {button}
       </button>
     </form>
   }
-  let path = window.location.pathname + "/" + items[window.history.state.current][props.index].name
-  return <>
-    <button className = {"folder"} onClick = {function() {
-      window.history.state.names[props.index] = items[window.history.state.current][props.index].name
-      window.history.pushState({ "names": window.history.state.names, "current": props.index }, undefined, path)
-      render("Main")
-    }}>
-      <div style = {{ "fontWeight": "bold" }}>
-        {items[window.history.state.current][props.index].name}
+  if (users[window.history.state.user][props.index].address) {
+    content = <a className = {"item"} target = {"_blank"} href = {users[window.history.state.user][props.index].address} style = {{ textDecoration: "none", color: "black" }}>
+      <img src = {"https://www.google.com/s2/favicons?domain=" + users[window.history.state.user][props.index].address} style = {{ height: "16px", width: "16px" }} />
+      <div style = {{ fontWeight: "bold" }}>
+        {users[window.history.state.user][props.index].name}
       </div>
       <div>
-        {items[window.history.state.current][props.index].description}
+        {users[window.history.state.user][props.index].description}
+      </div>
+    </a>
+  } else {
+    content = <button className = {"folder"} onClick = {function() {
+      window.history.pushState(users[window.history.state.user][props.index], undefined, window.location.pathname + "/" + users[window.history.state.user][props.index].name)
+      render("Main")
+    }}>
+      <div style = {{ fontWeight: "bold" }}>
+        {users[window.history.state.user][props.index].name}
+      </div>
+      <div>
+        {users[window.history.state.user][props.index].description}
       </div>
     </button>
-    <button onClick = {function() {
+  }
+  if (authenticated) {
+    button = <button onClick = {function() {
       editing[1](true)
-    }} style = {{ "position": "absolute", "top": "16px", "right": "100px" }}>
+    }} style = {{ position: "absolute", top: "16px", right: "100px" }}>
       edit
     </button>
+  }
+  return <>
+    {content}
+    {button}
   </>
 }
 function Item(props) {
-  if (items[window.history.state.current][props.index].address) {
-    return <Bookmark index = {props.index} />
+  let button
+  if (authenticated) {
+    button = <button onClick = {function() {
+      destroyed = []
+      destroy(props.index)
+      axios.put("/destroy", { user: window.history.state.user, destroyed: destroyed })
+      delete users[window.history.state.user][window.history.state.index].children[props.index]
+      window.history.replaceState(users[window.history.state.user][window.history.state.index], undefined)
+      render("Items")
+    }} style = {{ position: "absolute", top: "16px", right: "16px" }}>
+      delete
+    </button>
   }
-  return <Folder index = {props.index} />
+  return <div style = {{ position: "relative" }}>
+    <Content index = {props.index} />
+    {button}
+  </div>
 }
 function Items() {
   state.Items = react.useState()
   let folder = []
-  for (let index in items[window.history.state.current]) {
-    folder.push(<div key = {index} style = {{ "position": "relative" }}>
-      <Item index = {index} />
-      <button onClick = {function() {
-        destroyed = []
-        destroy(window.history.state.current, index)
-        axios.put("/destroy", { "user": user, "destroyed": destroyed })
-        render("Items")
-      }} style = {{ "position": "absolute", "top": "16px", "right": "16px" }}>
-        delete
-      </button>
-    </div>)
+  for (let index in window.history.state.children) {
+    folder.push(<Item key = {index} index = {index} />)
   }
   return <>
     {folder}
   </>
 }
-function Add() {
-  let bookmarkAddress = react.useRef()
-  let bookmarkName = react.useRef()
-  let bookmarkDescription = react.useRef()
-  let folderName = react.useRef()
-  let folderDescription = react.useRef()
-  return <>
-    <form className = {"item"} onSubmit = {function(event) {
-      event.preventDefault()
-      if (!(bookmarkAddress.current.value.startsWith("https://") || bookmarkAddress.current.value.startsWith("http://"))) {
-        bookmarkAddress.current.value = "https://" + bookmarkAddress.current.value
-      }
-      items[window.history.state.current][++next] = { "user": user, "index": next, "parent": window.history.state.current, "name": bookmarkName.current.value, "description": bookmarkDescription.current.value, "address": bookmarkAddress.current.value }
-      axios.post("/create", items[window.history.state.current][next])
-      bookmarkAddress.current.blur()
-      bookmarkName.current.blur()
-      bookmarkDescription.current.blur()
-      bookmarkAddress.current.value = ""
-      bookmarkName.current.value = ""
-      bookmarkDescription.current.value = ""
-      render("Items")
-    }}>
-      <input ref = {bookmarkAddress} placeholder = {"address"} />
-      <input ref = {bookmarkName} placeholder = {"name"} />
-      <input ref = {bookmarkDescription} placeholder = {"description"} />
-      <button>
-        add bookmark
-      </button>
-    </form>
-    <form className = {"item"} onSubmit = {function(event) {
-      event.preventDefault()
-      folderName.current.value = folderName.current.value.replaceAll(/[/?\\]/g, "")
-      if (folderName.current.value) {
-        for (let index in items[window.history.state.current]) {
-          if (items[window.history.state.current][index].name === folderName.current.value) {
-            alert("Folder names must be unique.")
-            folderName.current.focus()
-            return
-          }
-        }
-        items[window.history.state.current][++next] = { "user": user, "index": next, "parent": window.history.state.current, "name": folderName.current.value, "description": folderDescription.current.value }
-        items[next] = []
-        axios.post("/create", items[window.history.state.current][next])
-        folderName.current.blur()
-        folderDescription.current.blur()
-        folderName.current.value = ""
-        folderDescription.current.value = ""
-        render("Items")
-      } else {
-        folderName.current.focus()
-      }
-    }}>
-      <input ref = {folderName} placeholder = {"name"} />
-      <input ref = {folderDescription} placeholder = {"description"} />
-      <button>
-        add folder
-      </button>
-    </form>
-  </>
-}
 function Main() {
   state.Main = react.useState()
-  let path = []
-  for (let index in window.history.state.names) {
-    path[index] = <button key = {index} onClick = {function() {
-      let names = window.history.state.names.slice(0, Number(index) + 1)
+  let password = react.useRef()
+  let ancestors = []
+  for (let index in window.history.state.ancestors) {
+    let limit = Number(index) + 1
+    ancestors[index] = <button key = {index} onClick = {function() {
       let path = ""
-      for (let index in names) {
-        path += "/" + names[index]
+      for (let index in window.history.state.ancestors) {
+        if (index < limit) {
+          path += "/" + users[window.history.state.user][index].name
+        }
       }
-      window.history.pushState({ "names": names, "current": index }, undefined, path)
+      window.history.pushState(users[window.history.state.user][index], undefined, path)
       render("Main")
-    }}>
-      {window.history.state.names[index]}
+    }} style = {{ padding: "16px" }}>
+      {users[window.history.state.user][index].name}
     </button>
   }
-  path[window.history.state.current] = window.history.state.names[window.history.state.current]
+  ancestors[window.history.state.index] = <p key = {-1} style = {{ padding: "16px" }}>
+    {window.history.state.name}
+  </p>
+  let create
+  if (user) {
+    log = <button onClick = {function() {
+      user = undefined
+      authenticated = undefined
+      render("Main")
+    }} style = {{ height: "21px" }}>
+      log out from {user}
+    </button>
+    if (authenticated) {
+      create = <>
+        <Content create = {"bookmark"} />
+        <Content create = {"folder"} />
+      </>
+    }
+  } else {
+    log = <form onSubmit = {async function(event) {
+      event.preventDefault()
+      if ((await axios.post("/passwordFind", { user: window.history.state.user, password: password.current.value })).data) {
+        user = window.history.state.user
+        authenticated = true
+        render("Main")
+      } else {
+        alert("Incorrect password.")
+        password.current.value = ""
+        password.current.focus()
+      }
+    }} style = {{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+      <input ref = {password} placeholder = {"password"} type = {"password"} autoFocus />
+      <button>
+        log into {window.history.state.user}
+      </button>
+    </form>
+  }
   return <>
-    {path}
-    <div style = {{ "borderStyle": "solid" }}>
+    <header style = {{ height: "51px", padding: "16px", display: "flex", justifyContent: "space-between" }}>
+      <nav style = {{ display: "flex", alignItems: "center" }}>
+        <button key = {-2} onClick = {function() {
+          window.history.pushState({}, undefined, "/")
+          render("Browse")
+        }} style = {{ padding: "16px" }}>
+          browse
+        </button>
+        {ancestors}
+      </nav>
+      {log}
+    </header>
+    <div style = {{ borderStyle: "solid" }}>
       <Items />
-      <Add />
+      {create}
     </div>
   </>
 }
-axios.post("/findAll", { "user": user }).then(function(response) {
-  window.history.replaceState({ "names": [user], "current": "0" }, undefined, "/" + user)
-  for (let index in response.data) {
-    map[response.data[index].index] = true
-    if (!response.data[index].address) {
-      if (response.data[index].name === path[step] && response.data[index].parent === window.history.state.current) {
-        window.history.state.names[response.data[index].index] = response.data[index].name
-        window.history.replaceState({ "names": window.history.state.names, "current": response.data[index].index }, undefined, window.location.pathname + "/" + response.data[index].name)
-        ++step
-      }
-      items[response.data[index].index] = []
-    }
-    items[response.data[index].parent][response.data[index].index] = response.data[index]
+function Download() {
+  state.Download = react.useState()
+  if (window.history.state.name) {
+    authenticated = window.history.state.user === user
+    return <Main />
   }
-  next = map.length
+  axios.post("/itemsFind", { user: window.history.state.user }).then(function(response) {
+    let path = decodeURI(window.location.pathname).split("/")
+    window.history.replaceState({ user: window.history.state.user, ancestors: [], index: "0", name: window.history.state.user, children: [] }, undefined, "/" + window.history.state.user)
+    users[window.history.state.user] = [window.history.state]
+    for (let index in response.data) {
+      users[window.history.state.user][response.data[index].index] = response.data[index]
+    }
+    let step = 2
+    for (let index in users[window.history.state.user]) {
+      if (index !== "0") {
+        users[window.history.state.user][users[window.history.state.user][index].parent].children[index] = true
+        if (!users[window.history.state.user][index].address) {
+          if (users[window.history.state.user][index].name === path[step] && users[window.history.state.user][index].parent === window.history.state.index) {
+            window.history.replaceState(users[window.history.state.user][index], undefined, window.location.pathname + "/" + users[window.history.state.user][index].name)
+            ++step
+          }
+          users[window.history.state.user][index].ancestors = users[window.history.state.user][users[window.history.state.user][index].parent].ancestors.slice()
+          users[window.history.state.user][index].ancestors[users[window.history.state.user][index].parent] = true
+          users[window.history.state.user][index].children = []
+        }
+      }
+    }
+    window.history.replaceState(users[window.history.state.user][window.history.state.index], undefined)
+    render("Download")
+  })
+}
+function Browse() {
+  state.Browse = react.useState()
+  let name = react.useRef()
+  let password = react.useRef()
+  let confirm = react.useRef()
+  if (window.history.state.user) {
+    return <Download />
+  }
+  let log
+  let create
+  if (user) {
+    log = <button onClick = {function() {
+      user = undefined
+      render("Browse")
+    }} style = {{ height: "21px" }}>
+      log out from {user}
+    </button>
+  } else {
+    create = <form className = {"item"} onSubmit = {function(event) {
+      event.preventDefault()
+      name.current.value = name.current.value.replaceAll(/[?/%\\]/g, "").toLowerCase()
+      if (name.current.value) {
+        if (users[name.current.value]) {
+          alert("Name must be unique.")
+          name.current.focus()
+        } else if (password.current.value === confirm.current.value) {
+          window.history.pushState({ user: name.current.value, name: name.current.value, index: 0, children: [] }, undefined, "/" + name.current.value)
+          axios.post("/usersCreate", { name: name.current.value, password: password.current.value })
+          users[name.current.value] = [window.history.state]
+          user = name.current.value
+          render("Browse")
+        } else {
+          alert("Password and confirm password must be the same.")
+          password.current.value = ""
+          confirm.current.value = ""
+          password.current.focus()
+        }
+      } else {
+        name.current.focus()
+      }
+    }}>
+      <input ref = {name} placeholder = {"name"} />
+      <input ref = {password} placeholder = {"password"} type = {"password"} />
+      <input ref = {confirm} placeholder = {"confirm password"} type = {"password"} />
+      <button>
+        create
+      </button>
+    </form>
+  }
+  let browse = []
+  for (let index in users) {
+    browse.push(<button key = {index} className = {"folder"} onClick = {function() {
+      let path = "/" + index
+      if (users[index]?.[0]) {
+        window.history.pushState(users[index][0], undefined, path)
+      } else {
+        window.history.pushState({ user: index }, undefined, path)
+      }
+      render("Browse")
+    }}>
+      <div style = {{ fontWeight: "bold" }}>
+        {index}
+      </div>
+      <div>
+        {descriptions[index]}
+      </div>
+    </button>)
+  }
+  return <>
+    <header style = {{ height: "51px", padding: "16px", display: "flex", justifyContent: "space-between" }}>
+      <nav style = {{ padding: "16px" }}>
+        browse
+      </nav>
+      {log}
+    </header>
+    <div style = {{ borderStyle: "solid" }}>
+      {browse}
+      {create}
+    </div>
+  </>
+}
+axios.post("/usersFind").then(function(response) {
+  for (let index in response.data) {
+    users[response.data[index].name] = []
+    descriptions[response.data[index].name] = response.data[index].description
+  }
+  let user = decodeURI(window.location.pathname).split("/")[1].toLowerCase()
+  if (users[user]) {
+    window.history.replaceState({ user: user }, undefined)
+  } else {
+    window.history.replaceState({}, undefined, "/")
+  }
   reactDOM.createRoot(document.querySelector("div")).render(<react.StrictMode>
-    <Main />
+    <Browse />
   </react.StrictMode>)
 })
+
+
+
+
+
+// axios.post("/findAll", { user: user }).then(function(response) {
+//   window.history.replaceState({ names: [user], current: "0" }, undefined, "/" + user)
+//   for (let index in response.data) {
+//     map[response.data[index].index] = true
+//     if (!response.data[index].address) {
+//       if (response.data[index].name === path[step] && response.data[index].parent === window.history.state.current) {
+//         window.history.state.names[response.data[index].index] = response.data[index].name
+//         window.history.replaceState({ names: window.history.state.names, current: response.data[index].index }, undefined, window.location.pathname + "/" + response.data[index].name)
+//         ++step
+//       }
+//       items[response.data[index].index] = []
+//     }
+//     items[response.data[index].parent][response.data[index].index] = response.data[index]
+//   }
+//   next = map.length
+//   reactDOM.createRoot(document.querySelector("div")).render(<react.StrictMode>
+//     <App />
+//   </react.StrictMode>)
+// })
