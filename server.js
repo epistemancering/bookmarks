@@ -15,6 +15,10 @@ let tags = database.define("tags", { name: sequelize.DataTypes.TEXT, item: seque
 let shares = database.define("shares", { user: sequelize.DataTypes.TEXT, item: sequelize.DataTypes.DECIMAL })
 let api = express()
 api.use(express.json())
+api.use(express.static(__dirname + "/build"))
+api.get("*", function(request, response) {
+    response.sendFile(__dirname + "/build/")
+})
 api.post("/find", async function(request, response) {
     response.send(await Promise.all([
         users.findAll({ attributes: ["name", "description"] }),
@@ -64,10 +68,6 @@ api.put("/destroy", function(request, response) {
     items.destroy({
         where: { user: request.body.user, index: request.body.destroyed }
     })
-})
-api.use(express.static(__dirname + "/build"))
-api.use(function(request, response) {
-    response.sendFile(__dirname + "/build/")
 })
 database.sync().then(function() {
     api.listen(3000)
