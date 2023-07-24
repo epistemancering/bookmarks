@@ -6,13 +6,16 @@
   bookmarks
 </title>
 <style>
-.item {border-width: thin; border-style: solid; padding: 16px 0; display: flex; align-items: center;}
 .folder {width: 100%; padding: 16px 0; display: flex; align-items: center;}
-.item *, .folder * {margin-left: 16px;}
+.overlay {top: 0; left: 0; height: 100%; width: 100%;}
+.item, .overlay form {border-width: thin; border-style: solid; background-color: white; padding: 16px 0; display: flex; align-items: center;}
+.folder *, .item *, .overlay form * {margin-left: 16px;}
+.bookmark {background-color: lavender;}
+.bookmark:hover {background-color: lightblue;}
 </style>
 </head>
-<body>
-<div>
+<body style = "margin: 0; background-color: gainsboro; display: flex; justify-content: center;">
+<div style = "min-height: calc(100vh - 32px); width: 1000px; background-color: whitesmoke; padding: 16px;">
 </div>
 </body>
 </html>
