@@ -24,18 +24,18 @@ let authenticated
 let account
 let search = ""
 let item
+let overlay
 axios.defaults.headers.user = localStorage.user
 axios.defaults.headers.token = localStorage.token
 let traveler
 let high
 let low
 let destroyed
-let settings
 let imported = false
 let deleting
 let password
 window.addEventListener("popstate", function() {
-  render("Browse")
+  render("City")
 })
 function redirect(items, path) {
   window.history.replaceState({ user: window.history.state.user, index: 0, name: window.history.state.user, children: [], end: [] }, undefined, "/" + window.history.state.user)
@@ -69,23 +69,17 @@ function redirect(items, path) {
 function render(component) {
   state[component][1]({})
 }
+function onClick(event) {
+  if (event.target === event.currentTarget) {
+    overlay = undefined
+    render("Overlay")
+  }
+}
 function mismatch(error, password, confirm) {
   alert(error)
   password.value = ""
   confirm.value = ""
   password.focus()
-}
-function onClick(event) {
-  if (event.target === event.currentTarget) {
-    settings = undefined
-    render("Settings")
-  }
-}
-function destroy(parent) {
-  for (let index in users[window.history.state.user][parent].children) {
-    destroy(index)
-  }
-  destroyed.push(parent)
 }
 function onDragStart(index) {
   traveler = index
@@ -94,13 +88,14 @@ function onDragStart(index) {
   }
 }
 function onDragOver(event, index) {
-  if (index !== undefined && authenticated) {
+  if (authenticated && (index !== undefined || !traveler)) {
     event.preventDefault()
     let box = event.target.getBoundingClientRect()
     let mouse = 4 * event.clientY
     high = 3 * box.top + box.bottom > mouse
     low = box.top + 3 * box.bottom < mouse
     if (traveler) {
+      event.preventDefault()
       let origin = users[window.history.state.user][traveler].order
       let destination = users[window.history.state.user][index].order
       let direction = Math.sign(origin - destination)
@@ -113,10 +108,10 @@ function onDragOver(event, index) {
   }
 }
 function onDrop(event, index) {
-  if (index !== undefined && authenticated) {
+  if (authenticated) {
     event.preventDefault()
     if (traveler) {
-      if (index !== traveler) {
+      if (index !== traveler && index !== undefined) {
         users[window.history.state.user][traveler].order = users[window.history.state.user][index].end++
         users[window.history.state.user][traveler].parent = index
         axios.put("/itemsUpdate", users[window.history.state.user][traveler])
@@ -130,18 +125,23 @@ function onDrop(event, index) {
     } else {
       let address = event.dataTransfer.getData("text")
       if (address.startsWith("http")) {
+        let order
         if (users[window.history.state.user][window.history.state.index].children[index] && (users[window.history.state.user][index].address || high || low)) {
-          let order = users[window.history.state.user][index].order
+          order = users[window.history.state.user][index].order
           if (low && !users[window.history.state.user][index].address) {
             ++order
           }
           shift(users[window.history.state.user][window.history.state.index].end++, 1, order)
+        } else if (index === undefined) {
+          order = users[window.history.state.user][window.history.state.index].end++
+        }
+        if (order === undefined) {
+          item = { user: window.history.state.user, index: users[window.history.state.user].length, parent: index, order: users[window.history.state.user][index].end++, address: address }
+          users[window.history.state.user][index].children[users[window.history.state.user].length] = true
+        } else {
           item = { user: window.history.state.user, index: users[window.history.state.user].length, parent: window.history.state.index, order: order, address: address }
           users[window.history.state.user][window.history.state.index].children[users[window.history.state.user].length] = true
           imported = String(users[window.history.state.user].length)
-        } else {
-          item = { user: window.history.state.user, index: users[window.history.state.user].length, parent: index, order: users[window.history.state.user][index].end++, address: address }
-          users[window.history.state.user][index].children[users[window.history.state.user].length] = true
         }
         users[window.history.state.user].push(item)
         arrange(item)
@@ -172,6 +172,12 @@ function arrange(item) {
   }
   axios.put("/createUpdate", { item: item, indices: indices, orders: orders })
 }
+function destroy(parent) {
+  for (let index in users[window.history.state.user][parent].children) {
+    destroy(index)
+  }
+  destroyed.push(parent)
+}
 function reject(password) {
   alert("Incorrect password.")
   password.value = ""
@@ -180,12 +186,12 @@ function reject(password) {
 function App() {
   state.App = react.useState()
   return <>
-    <Browse />
-    <Settings />
+    <City />
+    <Overlay />
   </>
 }
-function Browse() {
-  state.Browse = react.useState()
+function City() {
+  state.City = react.useState()
   let user = react.useRef()
   let password = react.useRef()
   let confirm = react.useRef()
@@ -197,23 +203,31 @@ function Browse() {
     }
     axios.post("/itemsFind", { user: window.history.state.user }).then(function(response) {
       redirect(response.data, decodeURI(window.location.pathname).split("/"))
-      render("Browse")
+      render("City")
     })
   }
-  let account
+  document.title = "Bookmark City"
   let create
   if (localStorage.user) {
     account = <Account />
   } else {
+    account = <div>
+      <button onClick = {function() {
+        overlay = <About />
+        render("Overlay")
+      }}>
+        about Bookmark City
+      </button>
+    </div>
     create = <form className = {"item"} onSubmit = {function(event) {
       event.preventDefault()
-      user.current.value = user.current.value.replaceAll(/[?/%\\]/g, "").toLowerCase()
+      user.current.value = user.current.value.trim().replaceAll(/[?/%\\]/g, "").toLowerCase()
       if (user.current.value) {
         if (users[user.current.value]) {
           alert("Name must be unique.")
           user.current.focus()
         } else if (password.current.value === confirm.current.value) {
-          window.history.pushState({ user: user.current.value, index: 0, name: user.current.value, children: [] }, undefined, "/" + user.current.value)
+          window.history.pushState({ user: user.current.value, index: 0, name: user.current.value, children: [], end: 0 }, undefined, "/" + user.current.value)
           axios.post("/create", { user: user.current.value, password: password.current.value }).then(function(response) {
             localStorage.token = response.data
             axios.defaults.headers.token = localStorage.token
@@ -221,7 +235,7 @@ function Browse() {
           users[user.current.value] = [window.history.state]
           localStorage.user = user.current.value
           axios.defaults.headers.user = localStorage.user
-          render("Browse")
+          render("City")
         } else {
           mismatch("Password and confirm password must be the same.", password.current, confirm.current)
         }
@@ -238,7 +252,7 @@ function Browse() {
     </form>
   }
   let terms = search.toUpperCase().split(" ")
-  let browse = []
+  let city = []
   loop: for (let index in users) {
     let user = index.toUpperCase()
     let description = descriptions[index]?.toUpperCase()
@@ -247,14 +261,14 @@ function Browse() {
         continue loop
       }
     }
-    browse.push(<button key = {index} className = {"folder"} onClick = {function() {
+    city.push(<button key = {index} className = {"folder"} onClick = {function() {
       let path = "/" + index
       if (users[index]?.[0]) {
         window.history.pushState(users[index][0], undefined, path)
       } else {
         window.history.pushState({ user: index }, undefined, path)
       }
-      render("Browse")
+      render("City")
     }}>
       <div style = {{ fontWeight: "bold" }}>
         {index}
@@ -267,20 +281,58 @@ function Browse() {
   return <>
     <header style = {{ height: "51px", padding: "16px", display: "flex", justifyContent: "space-between" }}>
       <nav style = {{ padding: "16px" }}>
-        browse
+        city
       </nav>
       <Search />
       {account}
     </header>
     <div style = {{ borderStyle: "solid" }}>
-      {browse}
+      {city}
       {create}
     </div>
   </>
 }
+function Search() {
+  return <div style = {{ display: "flex", alignItems: "center" }}>
+    <input value = {search} placeholder = {"search"} onChange = {function(event) {
+      search = event.target.value
+      if (window.history.state.name) {
+        render("Main")
+      } else {
+        render("City")
+      }
+    }} />
+  </div>
+}
+function Account() {
+  return <div style = {{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+    {localStorage.user}
+    <nav>
+      <button onClick = {function() {
+        delete localStorage.user
+        delete localStorage.token
+        if (window.history.state.name) {
+          authenticated = false
+          render("Main")
+        } else {
+          render("City")
+        }
+      }} style = {{ height: "21px" }}>
+        log out
+      </button>
+      <button onClick = {function() {
+        overlay = <Settings />
+        render("Overlay")
+      }}>
+        settings
+      </button>
+    </nav>
+  </div>
+}
 function Main() {
   state.Main = react.useState()
   let password = react.useRef()
+  document.title = window.history.state.name
   let parent = users[window.history.state.user][window.history.state.index].parent
   let ancestors = []
   while (parent !== undefined) {
@@ -344,9 +396,9 @@ function Main() {
         <button onClick = {function() {
           window.history.pushState({}, undefined, "/")
           search = ""
-          render("Browse")
+          render("City")
         }} style = {{ padding: "16px" }}>
-          browse
+          city
         </button>
         {nav}
         <p style = {{ padding: "16px" }}>
@@ -361,43 +413,6 @@ function Main() {
       {create}
     </div>
   </>
-}
-function Search() {
-  return <div style = {{ display: "flex", alignItems: "center" }}>
-    <input value = {search} placeholder = {"search"} onChange = {function(event) {
-      search = event.target.value
-      if (window.location.pathname === "/") {
-        render("Browse")
-      } else {
-        render("Main")
-      }
-    }} />
-  </div>
-}
-function Account() {
-  return <div style = {{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-    {localStorage.user}
-    <nav>
-      <button onClick = {function() {
-        delete localStorage.user
-        delete localStorage.token
-        if (window.location.pathname === "/") {
-          render("Browse")
-        } else {
-          authenticated = false
-          render("Main")
-        }
-      }} style = {{ height: "21px" }}>
-        log out
-      </button>
-      <button onClick = {function() {
-        settings = true
-        render("Settings")
-      }}>
-        settings
-      </button>
-    </nav>
-  </div>
 }
 function Items() {
   state.Items = react.useState()
@@ -419,7 +434,7 @@ function Items() {
       {items}
     </>
   }
-  return <div className = "item" style = {{ padding: "16px" }}>
+  return <div className = "item" onDragOver = {onDragOver} onDrop = {onDrop} style = {{ padding: "16px" }}>
     (empty)
   </div>
 }
@@ -571,78 +586,124 @@ function Content(props) {
     {button}
   </>
 }
+function Overlay() {
+  state.Overlay = react.useState()
+  if (overlay) {
+    return <>
+      <div className = {"overlay"} onClick = {onClick} style = {{ position: "fixed", backgroundColor: "rgb(0, 0, 0, .5)" }} />
+      <div className = {"overlay"} onClick = {onClick} style = {{ position: "absolute", display: "flex", justifyContent: "center", alignItems: "center" }}>
+        {overlay}
+      </div>
+    </>
+  }
+}
+function About() {
+  return <div style = {{ borderStyle: "solid", padding: "16px", width: "500px", backgroundColor: "white" }}>
+    <p>
+      Welcome to Austin Henrie's Bookmark City, the lightning fast bookmark manager where anyone can make a web directory for all to use.
+    </p>
+    <p>
+      Click any of the collections in the list to see what's inside. If you'd like to keep a bookmark for yourself, try clicking and dragging it to your browser's bookmarks bar.
+    </p>
+    <p>
+      To start your own collection, set a name and password at the bottom of the list. You can then add bookmarks either from scratch or by clicking and dragging from your browser's bookmarks bar. Once you have some bookmarks, try clicking and dragging to organize them.
+    </p>
+    <p>
+      There are many more features than are mentioned here, so go and check them out! Here are some collections you could make:
+    </p>
+    <ul>
+      <li>
+        Playlists that link to music from different sites
+      </li>
+      <li>
+        Wish lists that link to products from different stores
+      </li>
+      <li>
+        Productivity tools for your colleagues
+      </li>
+      <li>
+        Technical resources for your study group
+      </li>
+      <li>
+        Interesting Bookmark City collections you've found
+      </li>
+      <li>
+        Examples of React apps with optimistic UI, dynamic routing, global state, and token authentication that reinvent forgotten concepts from the 90s for the modern web
+      </li>
+      <li>
+        Literally anything else you can think of
+      </li>
+    </ul>
+    <div style = {{ display: "flex", justifyContent: "center" }}>
+      <a href = "https://github.com/epistemancering/bookmarks" target = "_blank">
+        GitHub repository
+      </a>
+    </div>
+  </div>
+}
 function Settings() {
-  state.Settings = react.useState()
   let description = react.useRef()
   let current = react.useRef()
   let change = react.useRef()
   let confirm = react.useRef()
-  if (settings) {
-    deleting = undefined
-    return <>
-      <div className = {"overlay"} onClick = {onClick} style = {{ position: "fixed", backgroundColor: "rgb(0, 0, 0, .5)" }} />
-      <div className = {"overlay"} onClick = {onClick} style = {{ position: "absolute", display: "flex", justifyContent: "center", alignItems: "center" }}>
-        <div style = {{ borderStyle: "solid" }}>
-          <form onSubmit = {function(event) {
-            event.preventDefault()
-            axios.put("/usersUpdate", { description: description.current.value })
-            descriptions[localStorage.user] = description.current.value
-            settings = undefined
-            render("Settings")
-          }}>
-            <input ref = {description} defaultValue = {descriptions[localStorage.user]} placeholder = {"description"} autoFocus />
-            <button>
-              change description
-            </button>
-          </form>
-          <form onSubmit = {async function(event) {
-            event.preventDefault()
-            if (change.current.value === confirm.current.value) {
-              if ((await axios.put("/findUpdate", { password: current.current.value, new: change.current.value })).data) {
-                settings = undefined
-                render("Settings")
-              } else {
-                reject(current.current)
-              }
-            } else {
-              mismatch("New password and confirm new password must be the same.", change.current, confirm.current)
-            }
-          }}>
-            <input ref = {current} placeholder = {"password"} type = {"password"} />
-            <input ref = {change} placeholder = {"new password"} type = {"password"} />
-            <input ref = {confirm} placeholder = {"confirm new password"} type = {"password"} />
-            <button style = {{ marginRight: "16px" }}>
-              change password
-            </button>
-          </form>
-          <form onSubmit = {async function(event) {
-            event.preventDefault()
-            if (deleting) {
-              if ((await axios.put("/findDestroy", { password: password.current.value })).data) {
-                window.history.replaceState({}, undefined, "/")
-                settings = undefined
-                delete users[localStorage.user]
-                delete descriptions[localStorage.user]
-                delete localStorage.user
-                delete localStorage.token
-                render("App")
-              } else {
-                reject(password.current)
-              }
-            } else {
-              deleting = true
-              render("Delete")
-            }
-          }}>
-            <Delete />
-            <button>
-              delete {localStorage.user}
-            </button>
-          </form>
-        </div>
-      </div>
-    </>
-  }
+  return <div style = {{ borderStyle: "solid" }}>
+    <form onSubmit = {function(event) {
+      event.preventDefault()
+      axios.put("/usersUpdate", { description: description.current.value })
+      descriptions[localStorage.user] = description.current.value
+      overlay = undefined
+      render("Overlay")
+    }}>
+      <input ref = {description} defaultValue = {descriptions[localStorage.user]} placeholder = {"description"} autoFocus />
+      <button>
+        change description
+      </button>
+    </form>
+    <form onSubmit = {async function(event) {
+      event.preventDefault()
+      if (change.current.value === confirm.current.value) {
+        if ((await axios.put("/findUpdate", { password: current.current.value, new: change.current.value })).data) {
+          overlay = undefined
+          render("Overlay")
+        } else {
+          reject(current.current)
+        }
+      } else {
+        mismatch("New password and confirm new password must be the same.", change.current, confirm.current)
+      }
+    }}>
+      <input ref = {current} placeholder = {"password"} type = {"password"} />
+      <input ref = {change} placeholder = {"new password"} type = {"password"} />
+      <input ref = {confirm} placeholder = {"confirm new password"} type = {"password"} />
+      <button style = {{ marginRight: "16px" }}>
+        change password
+      </button>
+    </form>
+    <form onSubmit = {async function(event) {
+      event.preventDefault()
+      if (deleting) {
+        if ((await axios.put("/findDestroy", { password: password.current.value })).data) {
+          window.history.replaceState({}, undefined, "/")
+          overlay = undefined
+          delete users[localStorage.user]
+          delete descriptions[localStorage.user]
+          delete localStorage.user
+          delete localStorage.token
+          render("App")
+        } else {
+          reject(password.current)
+        }
+      } else {
+        deleting = true
+        render("Delete")
+      }
+    }}>
+      <Delete />
+      <button>
+        delete {localStorage.user}
+      </button>
+    </form>
+  </div>
 }
 function Delete() {
   state.Delete = react.useState()
