@@ -18,7 +18,7 @@ You can start your own collection in three clicks, or one if you like using your
 
 &nbsp;
 * ### organize (fun!)
-![](screenshots/explore.png)
+![](screenshots/organize.png)
 
 Create folders. Nest them as deeply as you want. Click and drag anything to anywhere, including to or from your browser's bookmarks bar. The optimistic UI will never make you wait.
 
