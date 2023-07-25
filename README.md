@@ -1,5 +1,5 @@
 # Bookmark City
-The lightning fast bookmark manager where anyone can make a web directory for all to use. Make playlists that link to music from different sites, wish lists that link to products from different stores, or literally anything else you can think of. Explore the city [here](http://50.18.84.107:3000/).
+The lightning fast bookmark manager where anyone can make a web directory for all to use. Make playlists that link to music from different sites, wish lists that link to products from different stores, or literally anything else you can think of. Explore the city [here](http://bookmark.city/).
 
 &nbsp;
 
@@ -26,7 +26,7 @@ Create folders. Nest them as deeply as you want. Click and drag anything to anyw
 * ### share
 ![](screenshots/share.png)
 
-Every collection and folder, like [this one](http://50.18.84.107:3000/austin/some%20good%20music), has its own web address for easy sharing. You could even save links to other collections as bookmarks in your own....
+Every collection and folder, like [this one](http://bookmark.city/austin/some%20good%20music), has its own web address for easy sharing. You could even save links to other collections as bookmarks in your own....
 
 &nbsp;
 ## tech stack
