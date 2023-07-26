@@ -652,7 +652,11 @@ function Settings() {
       axios.put("/usersUpdate", { description: description.current.value })
       descriptions[localStorage.user] = description.current.value
       overlay = undefined
-      render("Overlay")
+      if (window.history.state.name) {
+        render("Overlay")
+      } else {
+        render("App")
+      }
     }}>
       <input ref = {description} defaultValue = {descriptions[localStorage.user]} placeholder = {"description"} autoFocus />
       <button>
