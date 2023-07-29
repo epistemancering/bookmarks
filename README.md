@@ -1,5 +1,5 @@
 # Bookmark City
-The lightning fast bookmark manager where anyone can make a web directory for all to use. Make playlists that link to music from different sites, wish lists that link to products from different stores, or literally anything else you can think of. Explore the city [here](https://bookmark.city/).
+The lightning fast bookmark manager where anyone can make a web directory for all to use. Make playlists that link to music from different sites, recipe books that link to recipes from different blogs, wish lists that link to products from different stores, or literally anything else you can think of. Explore the city [here](https://bookmark.city/).
 
 &nbsp;
 
@@ -34,7 +34,7 @@ Every collection and folder, like [this one](https://bookmark.city/austin/some%2
 * React
 * Custom global state management that's better than Redux
 * Custom dynamic routing that's better than React Router
-* NodeJs
+* NodeJS
 * Express
 * Amazon RDS via PostgreSQL via Sequelize ORM, but should have used DynamoDB
 * Bcrypt

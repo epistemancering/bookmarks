@@ -609,11 +609,14 @@ function About() {
       To start your own collection, set a name and password at the bottom of the list. You can then add bookmarks either from scratch or by clicking and dragging from your browser's bookmarks bar. Once you have some bookmarks, try clicking and dragging to organize them.
     </p>
     <p>
-      There are many more features than are mentioned here, so go and check them out! Here are some collections you could make:
+      There are many more features than are mentioned here, so go see what you can do! Here are some collections you could make:
     </p>
     <ul>
       <li>
         Playlists that link to music from different sites
+      </li>
+      <li>
+        Recipe books that link to recipes from different blogs
       </li>
       <li>
         Wish lists that link to products from different stores
@@ -693,6 +696,7 @@ function Settings() {
           delete descriptions[localStorage.user]
           delete localStorage.user
           delete localStorage.token
+          deleting = undefined
           render("App")
         } else {
           reject(password.current)
