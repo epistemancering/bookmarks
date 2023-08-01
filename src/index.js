@@ -69,7 +69,7 @@ function redirect(items, path) {
 function render(component) {
   state[component][1]({})
 }
-function onClick(event) {
+function onMouseDown(event) {
   if (event.target === event.currentTarget) {
     overlay = undefined
     render("Overlay")
@@ -590,8 +590,8 @@ function Overlay() {
   state.Overlay = react.useState()
   if (overlay) {
     return <>
-      <div className = {"overlay"} onClick = {onClick} style = {{ position: "fixed", backgroundColor: "rgb(0, 0, 0, .5)" }} />
-      <div className = {"overlay"} onClick = {onClick} style = {{ position: "absolute", display: "flex", justifyContent: "center", alignItems: "center" }}>
+      <div className = {"overlay"} onMouseDown = {onMouseDown} style = {{ position: "fixed", backgroundColor: "rgb(0, 0, 0, .5)" }} />
+      <div className = {"overlay"} onMouseDown = {onMouseDown} style = {{ position: "absolute", display: "flex", justifyContent: "center", alignItems: "center" }}>
         {overlay}
       </div>
     </>
