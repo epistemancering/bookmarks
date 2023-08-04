@@ -186,9 +186,40 @@ function reject(password) {
 function App() {
   state.App = react.useState()
   return <>
-    <City />
+    <Navigation />
+    <div style = {{ width: "max(709px, 50%)" }}>
+      <City />
+    </div>
     <Overlay />
   </>
+}
+function Navigation() {
+  return <ul style = {{ width: "max(354px, 25%)" }}>
+    {/* <li>
+      austin
+    </li>
+    <li>
+      alec
+    </li>
+    <li>
+      ryan
+    </li>
+    <li>
+      ryan1
+    </li>
+    <li>
+      sheldon
+    </li>
+    <li>
+      scott
+    </li>
+    <li>
+      natalie
+    </li>
+    <li>
+      test
+    </li> */}
+  </ul>
 }
 function City() {
   state.City = react.useState()

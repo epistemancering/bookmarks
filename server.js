@@ -99,6 +99,4 @@ api.put("/findDestroy", function(request, response) {
 })
 database.sync().then(function() {
     api.listen(3000)
-    users.update({ user: "austin" }, filter("eli"))
-    items.update({ user: "austin" }, filter("eli"))
 })
