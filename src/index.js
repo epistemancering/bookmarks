@@ -69,6 +69,16 @@ function redirect(items, path) {
 function render(component) {
   state[component][1]({})
 }
+//next: make this not return to the city every time
+function onClick(index) {
+  let path = "/" + index
+  if (users[index]?.[0]) {
+    window.history.pushState(users[index][0], undefined, path)
+  } else {
+    window.history.pushState({ user: index }, undefined, path)
+  }
+  render("City")
+}
 function onMouseDown(event) {
   if (event.target === event.currentTarget) {
     overlay = undefined
@@ -194,32 +204,22 @@ function App() {
   </>
 }
 function Navigation() {
-  return <ul style = {{ width: "max(354px, 25%)" }}>
-    {/* <li>
-      austin
-    </li>
-    <li>
-      alec
-    </li>
-    <li>
-      ryan
-    </li>
-    <li>
-      ryan1
-    </li>
-    <li>
-      sheldon
-    </li>
-    <li>
-      scott
-    </li>
-    <li>
-      natalie
-    </li>
-    <li>
-      test
-    </li> */}
-  </ul>
+  let shortcuts = []
+  for (let index in users) {
+    shortcuts.push(<div>
+      <button>
+        &gt;
+      </button>
+      <button onClick = {function() {
+        onClick(index)
+      }}>
+        {index}
+      </button>
+    </div>)
+  }
+  return <div style = {{ width: "max(194px, calc(25% - 160px))", padding: "48px" }}>
+    {/* {shortcuts} */}
+  </div>
 }
 function City() {
   state.City = react.useState()
@@ -293,13 +293,7 @@ function City() {
       }
     }
     city.push(<button key = {index} className = {"folder"} onClick = {function() {
-      let path = "/" + index
-      if (users[index]?.[0]) {
-        window.history.pushState(users[index][0], undefined, path)
-      } else {
-        window.history.pushState({ user: index }, undefined, path)
-      }
-      render("City")
+      onClick(index)
     }}>
       <div style = {{ fontWeight: "bold" }}>
         {index}
