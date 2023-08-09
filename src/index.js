@@ -69,13 +69,13 @@ function redirect(items, path) {
 function render(component) {
   state[component][1]({})
 }
-//next: make this not return to the city every time
-function onClick(index) {
+async function onClick(index) {
   let path = "/" + index
   if (users[index]?.[0]) {
     window.history.pushState(users[index][0], undefined, path)
   } else {
     window.history.pushState({ user: index }, undefined, path)
+    redirect((await axios.post("/itemsFind", { user: window.history.state.user })).data, decodeURI(window.location.pathname).split("/"))
   }
   render("City")
 }
@@ -206,7 +206,7 @@ function App() {
 function Navigation() {
   let shortcuts = []
   for (let index in users) {
-    shortcuts.push(<div>
+    shortcuts.push(<div key = {index}>
       <button>
         &gt;
       </button>
@@ -227,15 +227,9 @@ function City() {
   let password = react.useRef()
   let confirm = react.useRef()
   if (window.history.state.user) {
-    if (window.history.state.name) {
-      authenticated = window.history.state.user === localStorage.user
-      search = ""
-      return <Main />
-    }
-    axios.post("/itemsFind", { user: window.history.state.user }).then(function(response) {
-      redirect(response.data, decodeURI(window.location.pathname).split("/"))
-      render("City")
-    })
+    authenticated = window.history.state.user === localStorage.user
+    search = ""
+    return <Main />
   }
   document.title = "Bookmark City"
   let create
@@ -321,7 +315,7 @@ function Search() {
   return <div style = {{ display: "flex", alignItems: "center" }}>
     <input value = {search} placeholder = {"search"} onChange = {function(event) {
       search = event.target.value
-      if (window.history.state.name) {
+      if (window.history.state.name) { // switch to checking for window.history.state.user instead of window.history.state.name, and then it should be possible to consolidate, maybe with onClick()
         render("Main")
       } else {
         render("City")
