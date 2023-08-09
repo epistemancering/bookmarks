@@ -35,6 +35,7 @@ let imported = false
 let deleting
 let password
 window.addEventListener("popstate", function() {
+  search = ""
   render("City")
 })
 function redirect(items, path) {
@@ -69,6 +70,19 @@ function redirect(items, path) {
 function render(component) {
   state[component][1]({})
 }
+function onMouseDown(event) {
+  if (event.target === event.currentTarget) {
+    overlay = undefined
+    render("Overlay")
+  }
+}
+function research() {
+  if (window.history.state.user) {
+    render("Main")
+  } else {
+    render("City")
+  }
+}
 async function onClick(index) {
   let path = "/" + index
   if (users[index]?.[0]) {
@@ -79,17 +93,11 @@ async function onClick(index) {
   }
   render("City")
 }
-function onMouseDown(event) {
-  if (event.target === event.currentTarget) {
-    overlay = undefined
-    render("Overlay")
-  }
-}
 function mismatch(error, password, confirm) {
   alert(error)
-  password.value = ""
-  confirm.value = ""
-  password.focus()
+  password.current.value = ""
+  confirm.current.value = ""
+  password.current.focus()
 }
 function onDragStart(index) {
   traveler = index
@@ -262,7 +270,7 @@ function City() {
           axios.defaults.headers.user = localStorage.user
           render("City")
         } else {
-          mismatch("Password and confirm password must be the same.", password.current, confirm.current)
+          mismatch("Password and confirm password must be the same.", password, confirm)
         }
       } else {
         user.current.focus()
@@ -315,11 +323,7 @@ function Search() {
   return <div style = {{ display: "flex", alignItems: "center" }}>
     <input value = {search} placeholder = {"search"} onChange = {function(event) {
       search = event.target.value
-      if (window.history.state.name) { // switch to checking for window.history.state.user instead of window.history.state.name, and then it should be possible to consolidate, maybe with onClick()
-        render("Main")
-      } else {
-        render("City")
-      }
+      research()
     }} />
   </div>
 }
@@ -330,12 +334,8 @@ function Account() {
       <button onClick = {function() {
         delete localStorage.user
         delete localStorage.token
-        if (window.history.state.name) {
-          authenticated = false
-          render("Main")
-        } else {
-          render("City")
-        }
+        authenticated = false
+        research()
       }} style = {{ height: "21px" }}>
         log out
       </button>
@@ -369,8 +369,7 @@ function Main() {
           break
         }
       }
-      search = ""
-      render("Main")
+      render("City")
     }} onDragOver = {function(event) {
       event.preventDefault()
     }} onDrop = {function(event) {
@@ -576,8 +575,7 @@ function Content(props) {
   } else {
     content = <button className = {"folder"} onClick = {function() {
       window.history.pushState(users[window.history.state.user][props.index], undefined, window.location.pathname + "/" + users[window.history.state.user][props.index].name)
-      search = ""
-      render("Main")
+      render("City")
     }} draggable = {authenticated} onDragStart = {function() {
       onDragStart(props.index)
     }} onDragOver = {function(event) {
@@ -674,7 +672,7 @@ function Settings() {
       axios.put("/usersUpdate", { description: description.current.value })
       descriptions[localStorage.user] = description.current.value
       overlay = undefined
-      if (window.history.state.name) {
+      if (window.history.state.user) {
         render("Overlay")
       } else {
         render("App")
@@ -695,7 +693,7 @@ function Settings() {
           reject(current.current)
         }
       } else {
-        mismatch("New password and confirm new password must be the same.", change.current, confirm.current)
+        mismatch("New password and confirm new password must be the same.", change, confirm)
       }
     }}>
       <input ref = {current} placeholder = {"password"} type = {"password"} />
