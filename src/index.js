@@ -85,7 +85,7 @@ function research() {
 }
 async function onClick(index) {
   let path = "/" + index
-  if (users[index]?.[0]) {
+  if (users[index][0]) {
     window.history.pushState(users[index][0], undefined, path)
   } else {
     window.history.pushState({ user: index }, undefined, path)
@@ -214,20 +214,53 @@ function App() {
 function Navigation() {
   let shortcuts = []
   for (let index in users) {
-    shortcuts.push(<div key = {index}>
-      <button>
-        &gt;
-      </button>
-      <button onClick = {function() {
-        onClick(index)
-      }}>
-        {index}
-      </button>
-    </div>)
+    shortcuts.push(<li key = {index}>
+      <Shortcut index = {index} />
+    </li>)
   }
-  return <div style = {{ width: "max(194px, calc(25% - 160px))", padding: "48px" }}>
+  return <ul style = {{ width: "max(194px, calc(25% - 160px))", padding: "48px" }}>
     {/* {shortcuts} */}
-  </div>
+  </ul>
+}
+function Shortcut(props) {
+  let arrow = react.useState(">")
+  let folders = []
+  if (arrow[0] === "v") {
+    for (let index in users[props.index][0].children) {
+      if (!users[props.index][index].address) {
+        folders[users[props.index][index].order] = <li key = {index}>
+          <button>
+            v
+          </button>
+          <button>
+            {users[props.index][index].name}
+          </button>
+        </li>
+      }
+    }
+  }
+  return <>
+    <button onClick = {function() {
+      if (arrow[0] === ">") {
+        if (!users[props.index][0]) {
+          // needs to download data
+        }
+        arrow[1]("v")
+      } else {
+        arrow[1](">")
+      }
+    }}>
+      {arrow[0]}
+    </button>
+    <button onClick = {function() {
+      onClick(props.index)
+    }}>
+      {props.index}
+    </button>
+    <ul>
+      {folders}
+    </ul>
+  </>
 }
 function City() {
   state.City = react.useState()
