@@ -39,24 +39,10 @@ window.addEventListener("popstate", function() {
   render("City")
 })
 function redirect(items, path) {
-  window.history.replaceState({ user: window.history.state.user, index: 0, name: window.history.state.user, children: [], end: [] }, undefined, "/" + window.history.state.user)
-  users[window.history.state.user] = [window.history.state]
-  for (let index in items) {
-    items[index].children = []
-    items[index].end = []
-    users[window.history.state.user][items[index].index] = items[index]
-  }
-  for (let index in users[window.history.state.user]) {
-    if (index !== "0") {
-      users[window.history.state.user][users[window.history.state.user][index].parent].children[index] = true
-      users[window.history.state.user][users[window.history.state.user][index].parent].end[users[window.history.state.user][index].order] = true
-    }
-  }
-  for (let index in users[window.history.state.user]) {
-    users[window.history.state.user][index].end = users[window.history.state.user][index].end.length
-  }
+  cache(window.history.state.user, items)
   let index = 1
   let parent = 0
+  window.history.replaceState(users[window.history.state.user][0], undefined, "/" + window.history.state.user)
   while (path[++index]) {
     for (let index2 in users[window.history.state.user][parent].children) {
       if (users[window.history.state.user][index2].name === path[index] && !users[window.history.state.user][index2].address) {
@@ -65,6 +51,23 @@ function redirect(items, path) {
         break
       }
     }
+  }
+}
+function cache(user, items) {
+  users[user] = [{ user: user, index: 0, name: user, children: [], end: [] }]
+  for (let index in items) {
+    items[index].children = []
+    items[index].end = []
+    users[user][items[index].index] = items[index]
+  }
+  for (let index in users[user]) {
+    if (index !== "0") {
+      users[user][users[user][index].parent].children[index] = true
+      users[user][users[user][index].parent].end[users[user][index].order] = true
+    }
+  }
+  for (let index in users[user]) {
+    users[user][index].end = users[user][index].end.length
   }
 }
 function render(component) {
@@ -218,7 +221,7 @@ function Navigation() {
       <Shortcut index = {index} />
     </li>)
   }
-  return <ul style = {{ width: "max(194px, calc(25% - 160px))", padding: "48px" }}>
+  return <ul className = {"navigation"} style = {{ width: "max(194px, calc(25% - 160px))", padding: "48px" }}>
     {/* {shortcuts} */}
   </ul>
 }
@@ -227,7 +230,7 @@ function Shortcut(props) {
   let folders = []
   if (arrow[0] === "v") {
     for (let index in users[props.index][0].children) {
-      if (!users[props.index][index].address) {
+      if (!users[props.index][index].address) { // next, allow showing nested folders
         folders[users[props.index][index].order] = <li key = {index}>
           <button>
             v
@@ -240,10 +243,10 @@ function Shortcut(props) {
     }
   }
   return <>
-    <button onClick = {function() {
+    <button onClick = {async function() {
       if (arrow[0] === ">") {
         if (!users[props.index][0]) {
-          // needs to download data
+          cache(props.index, (await axios.post("/itemsFind", { user: props.index })).data)
         }
         arrow[1]("v")
       } else {
