@@ -208,7 +208,7 @@ function App() {
   state.App = react.useState()
   return <>
     <Navigation />
-    <div style = {{ width: "max(709px, 50%)" }}>
+    <div style = {{ width: "max(734px, 50%)" }}>
       <City />
     </div>
     <Overlay />
@@ -222,22 +222,18 @@ function Navigation() {
     </li>)
   }
   return <ul className = {"navigation"} style = {{ width: "max(194px, calc(25% - 160px))", padding: "48px" }}>
-    {/* {shortcuts} */}
+    {shortcuts}
   </ul>
 }
+// disappear the arrow if there are no subfolders, consolidate Shortcut and FolderShortCut, implement live updates, revisit width
 function Shortcut(props) {
   let arrow = react.useState(">")
   let folders = []
   if (arrow[0] === "v") {
     for (let index in users[props.index][0].children) {
-      if (!users[props.index][index].address) { // next, allow showing nested folders
+      if (!users[props.index][index].address) {
         folders[users[props.index][index].order] = <li key = {index}>
-          <button>
-            v
-          </button>
-          <button>
-            {users[props.index][index].name}
-          </button>
+          <FolderShortCut user = {props.index} index = {index} path = {"/" + props.index + "/" + users[props.index][index].name} />
         </li>
       }
     }
@@ -259,6 +255,39 @@ function Shortcut(props) {
       onClick(props.index)
     }}>
       {props.index}
+    </button>
+    <ul>
+      {folders}
+    </ul>
+  </>
+}
+function FolderShortCut(props) {
+  let arrow = react.useState(">")
+  let folders = []
+  if (arrow[0] === "v") {
+    for (let index in users[props.user][props.index].children) {
+      if (!users[props.user][index].address) {
+        folders[users[props.user][index].order] = <li key = {index}>
+          <FolderShortCut user = {props.user} index = {index} path = {props.path + "/" + users[props.user][index].name} />
+        </li>
+      }
+    }
+  }
+  return <>
+    <button onClick = {function() {
+      if (arrow[0] === ">") {
+        arrow[1]("v")
+      } else {
+        arrow[1](">")
+      }
+    }}>
+      {arrow[0]}
+    </button>
+    <button onClick = {function() {
+      window.history.pushState(users[props.user][props.index], undefined, props.path)
+      render("City")
+    }}>
+      {users[props.user][props.index].name}
     </button>
     <ul>
       {folders}
