@@ -215,6 +215,7 @@ function App() {
   </>
 }
 function Navigation() {
+  state.Navigation = react.useState()
   let shortcuts = []
   for (let index in users) {
     shortcuts.push(<li key = {index}>
@@ -227,23 +228,10 @@ function Navigation() {
 }
 // track whether folders were open, consolidate Shortcut and FolderShortCut, implement live updates, revisit width
 function Shortcut(props) {
-  let arrow = react.useState(">")
-  let button
   let folders = []
-  if (arrow[0]) {
-    button = <button onClick = {async function() {
-      if (arrow[0] === ">") {
-        if (!users[props.index][0]) {
-          cache(props.index, (await axios.post("/itemsFind", { user: props.index })).data)
-        }
-        arrow[1]("v")
-      } else {
-        arrow[1](">")
-      }
-    }} style = {{ width: "100%" }}>
-      {arrow[0]}
-    </button>
-    if (arrow[0] === "v") {
+  let button
+  if (users[props.index][0]) {
+    if (users[props.index][0].open) {
       for (let index in users[props.index][0].children) {
         if (!users[props.index][index].address) {
           folders[users[props.index][index].order] = <li key = {index}>
@@ -251,10 +239,14 @@ function Shortcut(props) {
           </li>
         }
       }
-      if (!folders.length) {
-        arrow[1]()
+      if (folders.length) {
+        button = <ShortcutButton user = {props.index} arrow = {"v"} />
       }
+    } else {
+      button = <ShortcutButton user = {props.index} arrow = {">"} />
     }
+  } else {
+    button = <ShortcutButton user = {props.index} arrow = {">"} />
   }
   return <>
     <div style = {{ display: "flex" }}>
@@ -271,6 +263,17 @@ function Shortcut(props) {
       {folders}
     </ul>
   </>
+}
+function ShortcutButton(props) {
+  return <button onClick = {async function() {
+    if (!users[props.user][0]) {
+      cache(props.user, (await axios.post("/itemsFind", { user: props.user })).data)
+    }
+    users[props.user][0].open = !users[props.user][0].open
+    render("Navigation")
+  }} style = {{ width: "100%" }}>
+    {props.arrow}
+  </button>
 }
 function FolderShortCut(props) {
   let arrow = react.useState(">")
