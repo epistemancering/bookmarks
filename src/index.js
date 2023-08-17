@@ -216,119 +216,72 @@ function App() {
 }
 function Navigation() {
   state.Navigation = react.useState()
-  let shortcuts = []
+  let folders = []
   for (let index in users) {
-    shortcuts.push(<li key = {index}>
-      <Shortcut index = {index} />
-    </li>)
+    folders.push(<Folder key = {index} user = {index} index = {0} path = {""} />)
   }
   return <ul className = {"navigation"} style = {{ width: "max(194px, calc(25% - 160px))", padding: "48px" }}>
-    {/* {shortcuts} */}
+    {folders}
   </ul>
 }
-// track whether folders were open, consolidate Shortcut and FolderShortCut, implement live updates, revisit width
-function Shortcut(props) {
+// implement live updates, revisit width
+function Folder(props) {
   let folders = []
-  let button
-  if (users[props.index][0]?.open) {
-    for (let index in users[props.index][0].children) {
-      if (!users[props.index][index].address) {
-        folders[users[props.index][index].order] = <li key = {index}>
-          <FolderShortCut user = {props.index} index = {index} path = {"/" + props.index + "/" + users[props.index][index].name} />
-        </li>
+  let arrow
+  if (users[props.user][0]) {
+    for (let index in users[props.user][props.index].children) {
+      if (!users[props.user][index].address) {
+        folders[users[props.user][index].order] = <Folder key = {index} user = {props.user} index = {index} path = {props.path + "/" + users[props.user][index].name} />
       }
     }
     if (folders.length) {
-      button = <ShortcutButton user = {props.index} arrow = {"v"} />
+      if (users[props.user][props.index].open) {
+        arrow = <Arrow user = {props.user} index = {props.index} arrow = {"v"} />
+      } else {
+        arrow = <Arrow user = {props.user} index = {props.index} arrow = {">"} />
+        folders = undefined
+      }
     }
   } else {
-    button = <ShortcutButton user = {props.index} arrow = {">"} />
+    arrow = <Arrow user = {props.user} index = {props.index} arrow = {">"} />
   }
-  return <>
+  let folder
+  if (props.index) {
+    folder = <button onClick = {function() {
+      window.history.pushState(users[props.user][props.index], undefined, props.path)
+      render("City")
+    }}>
+      {users[props.user][props.index].name}
+    </button>
+  } else {
+    folder = <button onClick = {function() {
+      onClick(props.user)
+    }}>
+      {props.user}
+    </button>
+  }
+  return <li>
     <div style = {{ display: "flex" }}>
-      <div style = {{ height: "21px", width: "24px" }}>
-        {button}
+      <div style = {{ width: "24px" }}>
+        {arrow}
       </div>
-      <button onClick = {function() {
-        onClick(props.index)
-      }}>
-        {props.index}
-      </button>
+      {folder}
     </div>
     <ul>
       {folders}
     </ul>
-  </>
+  </li>
 }
-function ShortcutButton(props) {
+function Arrow(props) {
   return <button onClick = {async function() {
     if (!users[props.user][0]) {
       cache(props.user, (await axios.post("/itemsFind", { user: props.user })).data)
     }
-    users[props.user][0].open = !users[props.user][0].open
+    users[props.user][props.index].open = !users[props.user][props.index].open
     render("Navigation")
   }} style = {{ width: "100%" }}>
     {props.arrow}
   </button>
-}
-function FolderShortCut(props) {
-  // let folders = []
-  // let button
-  // if (users[props.user][props.index].open) {
-
-  // } else {
-    
-  // }
-  // if (arrow[0]) {
-  //   button = <button onClick = {function() {
-  //     if (arrow[0] === ">") {
-  //       arrow[1]("v")
-  //     } else {
-  //       arrow[1](">")
-  //     }
-  //   }} style = {{ width: "100%" }}>
-  //     {arrow[0]}
-  //   </button>
-  //   if (arrow[0] === ">") {
-  //     let empty = true
-  //     for (let index in users[props.user][props.index].children) {
-  //       if (!users[props.user][index].address) {
-  //         empty = undefined
-  //         break
-  //       }
-  //     }
-  //     if (empty) {
-  //       arrow[1]()
-  //     }
-  //   } else {
-  //     for (let index in users[props.user][props.index].children) {
-  //       if (!users[props.user][index].address) {
-  //         folders[users[props.user][index].order] = <li key = {index}>
-  //           <FolderShortCut user = {props.user} index = {index} path = {props.path + "/" + users[props.user][index].name} />
-  //         </li>
-  //       }
-  //     }
-  //     if (!folders.length) {
-  //       arrow[1]()
-  //     }
-  //   }
-  // }
-  // return <>
-  //   <div style = {{ display: "flex" }}>
-  //     <div style = {{ height: "21px", width: "24px" }}>
-  //       {button}
-  //     </div>
-  //     <button onClick = {function() {
-  //       window.history.pushState(users[props.user][props.index], undefined, props.path)
-  //       render("City")
-  //     }}>
-  //       {users[props.user][props.index].name}
-  //     </button>
-  //   </div>
-  //   <ul>
-  //     {folders}
-  //   </ul>
-  // </>
 }
 function City() {
   state.City = react.useState()
