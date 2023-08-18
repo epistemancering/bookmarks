@@ -116,13 +116,13 @@ function onDragOver(event, index) {
     high = 3 * box.top + box.bottom > mouse
     low = box.top + 3 * box.bottom < mouse
     if (traveler) {
-      event.preventDefault()
       let origin = users[window.history.state.user][traveler].order
       let destination = users[window.history.state.user][index].order
       let direction = Math.sign(origin - destination)
       if (users[window.history.state.user][index].address || (high && direction === 1) || (low && direction === -1)) {
         shift(origin - direction, direction, destination)
         users[window.history.state.user][traveler].order = destination
+        render("Navigation")
         render("Items")
       }
     }
@@ -142,6 +142,7 @@ function onDrop(event, index) {
         }
         users[window.history.state.user][index].children[traveler] = true
         traveler = undefined
+        render("Navigation")
       }
     } else {
       let address = event.dataTransfer.getData("text")
@@ -224,7 +225,7 @@ function Navigation() {
     {folders}
   </ul>
 }
-// implement live updates, revisit width
+// open folders automatically, consolidate rerendering Navigation alongside other components, revisit width
 function Folder(props) {
   let folders = []
   let arrow
@@ -322,6 +323,7 @@ function City() {
           users[user.current.value] = [window.history.state]
           localStorage.user = user.current.value
           axios.defaults.headers.user = localStorage.user
+          render("Navigation")
           render("City")
         } else {
           mismatch("Password and confirm password must be the same.", password, confirm)
@@ -519,6 +521,7 @@ function Item(props) {
       axios.put("/destroy", destroyed)
       delete users[window.history.state.user][window.history.state.index].children[props.index]
       window.history.replaceState(users[window.history.state.user][window.history.state.index], undefined)
+      render("Navigation")
       render("Items")
     }} style = {{ position: "absolute", top: "16px", right: "16px" }}>
       delete
@@ -585,12 +588,14 @@ function Content(props) {
           axios.put("/createUpdate", { item: item })
           users[window.history.state.user][window.history.state.index].children[users[window.history.state.user].length] = true
           users[window.history.state.user].push(item)
+          render("Navigation")
           render("Items")
         } else {
           users[window.history.state.user][props.index].name = name.current.value
           users[window.history.state.user][props.index].description = description.current.value
           users[window.history.state.user][props.index].address = address.current?.value
           axios.put("/itemsUpdate", users[window.history.state.user][props.index])
+          render("Navigation")
           editing[1]()
         }
       } else {
