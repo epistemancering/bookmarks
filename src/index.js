@@ -94,6 +94,8 @@ async function onClick(index) {
     window.history.pushState({ user: index }, undefined, path)
     redirect((await axios.post("/itemsFind", { user: window.history.state.user })).data, decodeURI(window.location.pathname).split("/"))
   }
+  users[index][0].open = true
+  render("Navigation")
   render("City")
 }
 function mismatch(error, password, confirm) {
@@ -225,7 +227,7 @@ function Navigation() {
     {folders}
   </ul>
 }
-// open folders automatically, consolidate rerendering Navigation alongside other components, revisit width
+// consolidate rerendering Navigation alongside other components and actions, revisit width
 function Folder(props) {
   let folders = []
   let arrow
@@ -250,6 +252,8 @@ function Folder(props) {
   if (props.index) {
     folder = <button onClick = {function() {
       window.history.pushState(users[props.user][props.index], undefined, props.path)
+      users[props.user][props.index].open = true
+      render("Navigation")
       render("City")
     }}>
       {users[props.user][props.index].name}
@@ -634,6 +638,8 @@ function Content(props) {
   } else {
     content = <button className = {"folder"} onClick = {function() {
       window.history.pushState(users[window.history.state.user][props.index], undefined, window.location.pathname + "/" + users[window.history.state.user][props.index].name)
+      users[window.history.state.user][props.index].open = true
+      render("Navigation")
       render("City")
     }} draggable = {authenticated} onDragStart = {function() {
       onDragStart(props.index)
