@@ -50,7 +50,7 @@ function route(items, path) {
   while (path[++index]) {
     for (let index2 in users[window.history.state.user][parent].children) {
       if (users[window.history.state.user][index2].name === path[index] && !users[window.history.state.user][index2].address) {
-        window.history.replaceState(users[window.history.state.user][index2], undefined, window.location.pathname + "/" + path[index])
+        window.history.replaceState(users[window.history.state.user][index2], undefined, window.location.pathname + "/" + path[index]) // should open navigation folders on page load
         parent = index2
         break
       }
@@ -93,7 +93,7 @@ async function onClick(index) {
     route((await axios.post("/itemsFind", { user: window.history.state.user })).data, decodeURI(window.location.pathname).split("/"))
   }
   users[index][0].open = true
-  render(["Nav", "Search", "Account", "City"])
+  render(["Navigation", "Nav", "Search", "Account", "City"])
 }
 function mismatch(error, password, confirm) {
   alert(error)
@@ -246,9 +246,8 @@ function Folder(props) {
       {users[props.user][props.index].name}
     </button>
   } else {
-    folder = <button onClick = {async function() {
-      await onClick(props.user)
-      state[1]({})
+    folder = <button onClick = {function() {
+      onClick(props.user)
     }}>
       {props.user}
     </button>
@@ -738,13 +737,12 @@ function Settings() {
       event.preventDefault()
       if (deleting) {
         if ((await axios.put("/findDestroy", { password: password.current.value })).data) {
-          window.history.replaceState({}, undefined, "/")
           delete users[localStorage.user]
-          delete descriptions[localStorage.user]
           delete localStorage.user
           delete localStorage.token
           overlay = deleting = undefined
           if (authenticated || !window.history.state.user) {
+            window.history.replaceState({}, undefined, "/")
             render(["Nav", "Search", "City"])
           }
           render(["Navigation", "Account", "Overlay"])
