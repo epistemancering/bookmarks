@@ -1,5 +1,5 @@
 import react from "react"
-import reactDOM from "react-dom/client"
+import reactDom from "react-dom/client"
 import axios from "axios"
 let path = decodeURI(window.location.pathname).split("/")
 window.history.replaceState({ user: path[1].toLowerCase() }, undefined)
@@ -13,7 +13,7 @@ axios.post("/find", { user: window.history.state.user }).then(function(response)
   } else {
     window.history.replaceState({}, undefined, "/")
   }
-  reactDOM.createRoot(document.querySelector("div")).render(<react.StrictMode>
+  reactDom.createRoot(document.querySelector("div")).render(<react.StrictMode>
     <ul className = {"navigation"} style = {{ width: "max(194px, calc(25% - 160px))", padding: "48px" }}> {/* revisit width */}
       <Navigation />
     </ul>
@@ -50,12 +50,14 @@ function route(items, path) {
   while (path[++index]) {
     for (let index2 in users[window.history.state.user][parent].children) {
       if (users[window.history.state.user][index2].name === path[index] && !users[window.history.state.user][index2].address) {
-        window.history.replaceState(users[window.history.state.user][index2], undefined, window.location.pathname + "/" + path[index]) // should open navigation folders on page load
+        window.history.replaceState(users[window.history.state.user][index2], undefined, window.location.pathname + "/" + path[index])
         parent = index2
+        users[window.history.state.user][index2].open = true
         break
       }
     }
   }
+  users[window.history.state.user][0].open = true
 }
 function cache(user, items) {
   users[user] = [{ user: user, index: 0, name: user, children: [], end: [] }]
@@ -90,9 +92,8 @@ async function onClick(index) {
     window.history.pushState(users[index][0], undefined, path)
   } else {
     window.history.pushState({ user: index }, undefined, path)
-    route((await axios.post("/itemsFind", { user: window.history.state.user })).data, decodeURI(window.location.pathname).split("/"))
+    route((await axios.post("/itemsFind", { user: window.history.state.user })).data, [])
   }
-  users[index][0].open = true
   render(["Navigation", "Nav", "Search", "Account", "City"])
 }
 function mismatch(error, password, confirm) {
@@ -208,7 +209,7 @@ function Navigation() { // change this name
   let folders = []
   for (let index in users) {
     folders.push(<li key = {index}>
-      <Folder user = {index} index = {0} path = {""} />
+      <Folder user = {index} index = {0} path = {"/" + index} />
     </li>)
   }
   return folders
