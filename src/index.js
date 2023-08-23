@@ -15,7 +15,7 @@ axios.post("/find", { user: window.history.state.user }).then(function(response)
   }
   reactDom.createRoot(document.querySelector("div")).render(<react.StrictMode>
     <ul className = {"navigation"} style = {{ width: "max(194px, calc(25% - 160px))", padding: "48px" }}> {/* revisit width */}
-      <Navigation />
+      <Folders />
     </ul>
     <div style = {{ width: "max(734px, 50%)" }}>
       <header style = {{ height: "51px", padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -35,13 +35,13 @@ axios.post("/find", { user: window.history.state.user }).then(function(response)
 let users = {}
 let descriptions = {}
 let state = {}
-let authenticated, search, terms, item, overlay, traveler, high, low, destroyed, deleting, password
+let authenticated, search, terms, item, overlay, traveler, high, low, destroyed, deleter
 axios.defaults.headers.user = localStorage.user
 axios.defaults.headers.token = localStorage.token
 let imported = false
-window.addEventListener("popstate", function() {
-  render(["Nav", "Search", "Account", "City"])
-})
+window.onpopstate = function() {
+  unsearch(["Nav", "Account", "City"])
+}
 function route(items, path) {
   cache(window.history.state.user, items)
   let index = 1
@@ -75,6 +75,11 @@ function cache(user, items) {
     users[user][index].end = users[user][index].end.length
   }
 }
+function unsearch(components) { // maybe include more common code for changing the path
+  search.current.value = ""
+  terms = undefined
+  render(components)
+}
 function render(components) {
   for (let index in components) {
     state[components[index]][1]({})
@@ -90,11 +95,12 @@ async function onClick(index) {
   let path = "/" + index
   if (users[index][0]) {
     window.history.pushState(users[index][0], undefined, path)
+    users[index][0].open = true
   } else {
     window.history.pushState({ user: index }, undefined, path)
     route((await axios.post("/itemsFind", { user: window.history.state.user })).data, [])
   }
-  render(["Navigation", "Nav", "Search", "Account", "City"])
+  unsearch(["Folders", "Nav", "Account", "City"])
 }
 function mismatch(error, password, confirm) {
   alert(error)
@@ -122,7 +128,7 @@ function onDragOver(event, index) {
       if (users[window.history.state.user][index].address || (high && direction === 1) || (low && direction === -1)) {
         shift(origin - direction, direction, destination)
         users[window.history.state.user][traveler].order = destination
-        render(["Navigation", "Items"])
+        render(["Folders", "Items"])
       }
     }
   }
@@ -141,7 +147,7 @@ function onDrop(event, index) {
         }
         users[window.history.state.user][index].children[traveler] = true
         traveler = undefined
-        render(["Navigation"])
+        render(["Folders"])
       }
     } else {
       let address = event.dataTransfer.getData("text")
@@ -204,8 +210,8 @@ function reject(password) {
   password.current.value = ""
   password.current.focus()
 }
-function Navigation() { // change this name
-  state.Navigation = react.useState()
+function Folders() {
+  state.Folders = react.useState()
   let folders = []
   for (let index in users) {
     folders.push(<li key = {index}>
@@ -241,8 +247,8 @@ function Folder(props) {
     folder = <button onClick = {function() {
       window.history.pushState(users[props.user][props.index], undefined, props.path)
       users[props.user][props.index].open = true
+      unsearch(["Nav", "Account", "City"])
       state[1]({})
-      render(["Nav", "Search", "Account", "City"])
     }}>
       {users[props.user][props.index].name}
     </button>
@@ -282,7 +288,7 @@ function Nav() {
     return <>
       <button onClick = {function() {
         window.history.pushState({}, undefined, "/")
-        render(["Navigation", "Nav", "Search", "Account", "City"])
+        unsearch(["Folders", "Nav", "Account", "City"])
       }} style = {{ padding: "16px" }}>
         city
       </button>
@@ -312,7 +318,7 @@ function Ancestry() {
           break
         }
       }
-      render(["Ancestry", "Search", "Items"])
+      unsearch(["Ancestry", "Items"])
     }} onDragOver = {function(event) {
       event.preventDefault() // this seems wrong. should prevent default only if authenticated and dragging a valid thing to a valid target
     }} onDrop = {function(event) {
@@ -329,12 +335,9 @@ function Ancestry() {
   </>
 }
 function Search() {
-  state.Search = react.useState() // doesn't update properly as is. test whether this could be based on useRef instead of useState
-  search = undefined
-  terms = undefined
-  return <input value = {search} placeholder = {"search"} onChange = {function(event) {
-    search = event.target.value
-    terms = search.toUpperCase().split(" ")
+  search = react.useRef()
+  return <input ref = {search} placeholder = {"search"} onChange = {function() {
+    terms = search.current.value.toUpperCase().split(" ")
     if (window.history.state.user) {
       render(["Items"])
     } else {
@@ -480,7 +483,7 @@ function City() {
           users[user.current.value] = [window.history.state]
           descriptions[user.current.value] = ""
           localStorage.user = axios.defaults.headers.user = user.current.value
-          render(["Navigation", "Nav", "Search", "Account", "City"])
+          unsearch(["Folders", "Nav", "Account", "City"])
         } else {
           mismatch("Password and confirm password must be the same.", password, confirm)
         }
@@ -538,7 +541,7 @@ function Items() {
         axios.put("/destroy", destroyed)
         delete users[window.history.state.user][window.history.state.index].children[index]
         window.history.replaceState(users[window.history.state.user][window.history.state.index], undefined)
-        render(["Navigation", "Items"])
+        render(["Folders", "Items"])
       }} style = {{ position: "absolute", top: "16px", right: "16px" }}>
         delete
       </button>
@@ -609,13 +612,13 @@ function Content(props) { // revisit this, just all of this
           axios.put("/createUpdate", { item: item })
           users[window.history.state.user][window.history.state.index].children[users[window.history.state.user].length] = true
           users[window.history.state.user].push(item)
-          render(["Navigation", "Items"])
+          render(["Folders", "Items"])
         } else {
           users[window.history.state.user][props.index].name = name.current.value
           users[window.history.state.user][props.index].description = description.current.value
           users[window.history.state.user][props.index].address = address.current?.value
           axios.put("/itemsUpdate", users[window.history.state.user][props.index])
-          render(["Navigation"])
+          render(["Folders"])
           editing[1]()
         }
       } else {
@@ -654,7 +657,7 @@ function Content(props) { // revisit this, just all of this
     content = <button className = {"folder"} onClick = {function() {
       window.history.pushState(users[window.history.state.user][props.index], undefined, window.location.pathname + "/" + users[window.history.state.user][props.index].name)
       users[window.history.state.user][props.index].open = true
-      render(["Navigation", "Ancestry", "Search", "Items"])
+      unsearch(["Folders", "Ancestry", "Items"])
     }} draggable = {authenticated} onDragStart = {function() {
       onDragStart(props.index)
     }} onDragOver = {function(event) {
@@ -695,9 +698,10 @@ function Overlay() {
 }
 function Settings() {
   let description = react.useRef()
-  let current = react.useRef()
-  let change = react.useRef()
+  let changePass = react.useRef()
+  let update = react.useRef()
   let confirm = react.useRef()
+  let deletePass = react.useRef()
   return <div style = {{ borderStyle: "solid" }}>
     <form onSubmit = {function(event) {
       event.preventDefault()
@@ -716,19 +720,19 @@ function Settings() {
     </form>
     <form onSubmit = {async function(event) {
       event.preventDefault()
-      if (change.current.value === confirm.current.value) {
-        if ((await axios.put("/findUpdate", { password: current.current.value, new: change.current.value })).data) {
+      if (update.current.value === confirm.current.value) {
+        if ((await axios.put("/findUpdate", { password: changePass.current.value, new: update.current.value })).data) {
           overlay = undefined
           render(["Overlay"])
         } else {
-          reject(current)
+          reject(changePass)
         }
       } else {
-        mismatch("New password and confirm new password must be the same.", change, confirm)
+        mismatch("New password and confirm new password must be the same.", update, confirm)
       }
     }}>
-      <input ref = {current} placeholder = {"password"} type = {"password"} />
-      <input ref = {change} placeholder = {"new password"} type = {"password"} />
+      <input ref = {changePass} placeholder = {"password"} type = {"password"} />
+      <input ref = {update} placeholder = {"new password"} type = {"password"} />
       <input ref = {confirm} placeholder = {"confirm new password"} type = {"password"} />
       <button style = {{ marginRight: "16px" }}>
         change password
@@ -736,36 +740,35 @@ function Settings() {
     </form>
     <form onSubmit = {async function(event) {
       event.preventDefault()
-      if (deleting) {
-        if ((await axios.put("/findDestroy", { password: password.current.value })).data) {
+      if (deleter) {
+        if ((await axios.put("/findDestroy", { password: deletePass.current.value })).data) {
           delete users[localStorage.user]
           delete localStorage.user
           delete localStorage.token
-          overlay = deleting = undefined
-          if (authenticated || !window.history.state.user) {
+          overlay = deleter = undefined
+          if (authenticated) {
             window.history.replaceState({}, undefined, "/")
-            render(["Nav", "Search", "City"])
+            unsearch(["Nav", "City"])
+          } else if (!window.history.state.user) {
+            render(["Nav", "City"])
           }
-          render(["Navigation", "Account", "Overlay"])
+          render(["Folders", "Account", "Overlay"])
         } else {
-          reject(password)
+          reject(deletePass)
         }
       } else {
-        deleting = true
-        render(["Delete"])
+        deleter = <input ref = {deletePass} placeholder = {"password"} type = {"password"} style = {{ color: "red" }} autoFocus />
+        render(["Deleter"])
       }
     }}>
-      <Delete />
+      <Deleter />
       <button>
         delete {localStorage.user}
       </button>
     </form>
   </div>
 }
-function Delete() { // seems there are other components that would be better if they worked like this one
-  state.Delete = react.useState()
-  password = react.useRef() // confused by this
-  if (deleting) {
-    return <input ref = {password} placeholder = {"password"} type = {"password"} style = {{ color: "red" }} autoFocus />
-  }
+function Deleter() { // seems there are other components that would be better if they worked like this one
+  state.Deleter = react.useState()
+  return deleter
 }
