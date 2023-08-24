@@ -40,9 +40,9 @@ axios.defaults.headers.user = localStorage.user
 axios.defaults.headers.token = localStorage.token
 let imported = false
 window.onpopstate = function() {
-  unsearch(["Nav", "Account", "City"])
+  render(["Nav", "Account", "City"], true)
 }
-function route(items, path) {
+function route(items, path) { // maybe route and cache should be one function
   cache(window.history.state.user, items)
   let index = 1
   let parent = 0
@@ -75,12 +75,14 @@ function cache(user, items) {
     users[user][index].end = users[user][index].end.length
   }
 }
-function unsearch(components) { // maybe include more common code for changing the path
-  search.current.value = ""
-  terms = undefined
-  render(components)
-}
-function render(components) {
+function render(components, push, path) {
+  if (push) {
+    if (path) {
+      window.history.pushState(push, undefined, path)
+    }
+    search.current.value = ""
+    terms = undefined
+  }
   for (let index in components) {
     state[components[index]][1]({})
   }
@@ -100,7 +102,7 @@ async function onClick(index) {
     window.history.pushState({ user: index }, undefined, path)
     route((await axios.post("/itemsFind", { user: window.history.state.user })).data, [])
   }
-  unsearch(["Folders", "Nav", "Account", "City"])
+  render(["Folders", "Nav", "Account", "City"], true)
 }
 function mismatch(error, password, confirm) {
   alert(error)
@@ -245,9 +247,8 @@ function Folder(props) {
   }
   if (props.index) {
     folder = <button onClick = {function() {
-      window.history.pushState(users[props.user][props.index], undefined, props.path)
       users[props.user][props.index].open = true
-      unsearch(["Nav", "Account", "City"])
+      render(["Nav", "Account", "City"], users[props.user][props.index], props.path)
       state[1]({})
     }}>
       {users[props.user][props.index].name}
@@ -287,8 +288,7 @@ function Nav() {
   if (window.history.state.user) {
     return <>
       <button onClick = {function() {
-        window.history.pushState({}, undefined, "/")
-        unsearch(["Folders", "Nav", "Account", "City"])
+        render(["Folders", "Nav", "Account", "City"], {}, "/")
       }} style = {{ padding: "16px" }}>
         city
       </button>
@@ -314,11 +314,10 @@ function Ancestry() {
       for (let index2 in ancestors) {
         path += "/" + users[window.history.state.user][ancestors[index2]].name
         if (index2 === index) {
-          window.history.pushState(users[window.history.state.user][ancestors[index]], undefined, path)
           break
         }
       }
-      unsearch(["Ancestry", "Items"])
+      render(["Ancestry", "Items"], users[window.history.state.user][ancestors[index]], path)
     }} onDragOver = {function(event) {
       event.preventDefault() // this seems wrong. should prevent default only if authenticated and dragging a valid thing to a valid target
     }} onDrop = {function(event) {
@@ -476,14 +475,13 @@ function City() {
           alert("Name must be unique.")
           user.current.focus()
         } else if (password.current.value === confirm.current.value) {
-          window.history.pushState({ user: user.current.value, index: 0, name: user.current.value, children: [], end: 0, open: true }, undefined, "/" + user.current.value)
           axios.post("/create", { user: user.current.value, description: "", password: password.current.value }).then(function(response) {
             localStorage.token = axios.defaults.headers.token = response.data
           })
-          users[user.current.value] = [window.history.state]
+          users[user.current.value] = [{ user: user.current.value, index: 0, name: user.current.value, children: [], end: 0, open: true }]
           descriptions[user.current.value] = ""
           localStorage.user = axios.defaults.headers.user = user.current.value
-          unsearch(["Folders", "Nav", "Account", "City"])
+          render(["Folders", "Nav", "Account", "City"], users[user.current.value][0], "/" + user.current.value)
         } else {
           mismatch("Password and confirm password must be the same.", password, confirm)
         }
@@ -655,9 +653,8 @@ function Content(props) { // revisit this, just all of this
     </div>
   } else {
     content = <button className = {"folder"} onClick = {function() {
-      window.history.pushState(users[window.history.state.user][props.index], undefined, window.location.pathname + "/" + users[window.history.state.user][props.index].name)
       users[window.history.state.user][props.index].open = true
-      unsearch(["Folders", "Ancestry", "Items"])
+      render(["Folders", "Ancestry", "Items"], users[window.history.state.user][props.index], window.location.pathname + "/" + users[window.history.state.user][props.index].name)
     }} draggable = {authenticated} onDragStart = {function() {
       onDragStart(props.index)
     }} onDragOver = {function(event) {
@@ -748,7 +745,7 @@ function Settings() {
           overlay = deleter = undefined
           if (authenticated) {
             window.history.replaceState({}, undefined, "/")
-            unsearch(["Nav", "City"])
+            render(["Nav", "City"], true)
           } else if (!window.history.state.user) {
             render(["Nav", "City"])
           }
