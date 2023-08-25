@@ -2,14 +2,26 @@ import react from "react"
 import reactDom from "react-dom/client"
 import axios from "axios"
 let path = decodeURI(window.location.pathname).split("/")
-window.history.replaceState({ user: path[1].toLowerCase() }, undefined)
-axios.post("/find", { user: window.history.state.user }).then(function(response) {
+let user = path[1].toLowerCase()
+axios.post("/find", { user: user }).then(function(response) {
   for (let index in response.data[0]) {
     users[response.data[0][index].user] = []
     descriptions[response.data[0][index].user] = response.data[0][index].description
   }
-  if (users[window.history.state.user]) {
-    route(response.data[1], path)
+  if (users[user]) {
+    let index = 1
+    cache(user, response.data[1], true)
+    let parent = 0
+    while (path[++index]) {
+      for (let index2 in users[user][parent].children) {
+        if (users[user][index2].name === path[index] && !users[user][index2].address) {
+          window.history.replaceState(users[user][index2], undefined, window.location.pathname + "/" + path[index])
+          parent = index2
+          users[user][index2].open = true
+          break
+        }
+      }
+    }
   } else {
     window.history.replaceState({}, undefined, "/")
   }
@@ -42,24 +54,7 @@ let imported = false
 window.onpopstate = function() {
   render(["Nav", "Account", "City"], true)
 }
-function route(items, path) { // maybe route and cache should be one function
-  cache(window.history.state.user, items)
-  let index = 1
-  let parent = 0
-  window.history.replaceState(users[window.history.state.user][0], undefined, "/" + window.history.state.user)
-  while (path[++index]) {
-    for (let index2 in users[window.history.state.user][parent].children) {
-      if (users[window.history.state.user][index2].name === path[index] && !users[window.history.state.user][index2].address) {
-        window.history.replaceState(users[window.history.state.user][index2], undefined, window.location.pathname + "/" + path[index])
-        parent = index2
-        users[window.history.state.user][index2].open = true
-        break
-      }
-    }
-  }
-  users[window.history.state.user][0].open = true
-}
-function cache(user, items) {
+function cache(user, items, navigate) {
   users[user] = [{ user: user, index: 0, name: user, children: [], end: [] }]
   for (let index in items) {
     items[index].children = []
@@ -73,6 +68,10 @@ function cache(user, items) {
   }
   for (let index in users[user]) {
     users[user][index].end = users[user][index].end.length
+  }
+  if (navigate) {
+    users[user][0].open = true
+    window.history.replaceState(users[user][0], undefined, "/" + user)
   }
 }
 function render(components, push, path) {
@@ -100,7 +99,7 @@ async function onClick(index) {
     users[index][0].open = true
   } else {
     window.history.pushState({ user: index }, undefined, path)
-    route((await axios.post("/itemsFind", { user: window.history.state.user })).data, [])
+    cache(index, (await axios.post("/itemsFind", window.history.state)).data, true)
   }
   render(["Folders", "Nav", "Account", "City"], true)
 }
