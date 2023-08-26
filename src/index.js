@@ -117,12 +117,12 @@ function onDragStart(index) {
 }
 function onDragOver(event, index) {
   if (authenticated && (index !== undefined || !traveler)) {
-    event.preventDefault()
     let box = event.target.getBoundingClientRect()
     let mouse = 4 * event.clientY
     high = 3 * box.top + box.bottom > mouse
     low = box.top + 3 * box.bottom < mouse
     if (traveler) {
+      event.preventDefault()
       let origin = users[window.history.state.user][traveler].order
       let destination = users[window.history.state.user][index].order
       let direction = Math.sign(origin - destination)
@@ -318,7 +318,7 @@ function Ancestry() {
       }
       render(["Ancestry", "Items"], users[window.history.state.user][ancestors[index]], path)
     }} onDragOver = {function(event) {
-      event.preventDefault() // this seems wrong. should prevent default only if authenticated and dragging a valid thing to a valid target
+      onDragOver(event, 0)
     }} onDrop = {function(event) {
       onDrop(event, ancestors[index])
     }} style = {{ padding: "16px" }}>
