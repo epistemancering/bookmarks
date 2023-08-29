@@ -1,6 +1,7 @@
 import react from "react"
 import reactDom from "react-dom/client"
 import axios from "axios"
+// need to sort the user list properly
 let path = decodeURI(window.location.pathname).split("/")
 let user = path[1].toLowerCase()
 axios.post("/find", { user: user }).then(function(response) {
@@ -22,8 +23,10 @@ axios.post("/find", { user: user }).then(function(response) {
         }
       }
     }
+    document.title = window.history.state.name
   } else {
     window.history.replaceState({}, undefined, "/")
+    document.title = "Bookmark City"
   }
   reactDom.createRoot(document.querySelector("div")).render(<react.StrictMode>
     <ul className = {"navigation"} style = {{ width: "max(194px, calc(25% - 160px))", padding: "48px" }}> {/* revisit width */}
@@ -39,7 +42,9 @@ axios.post("/find", { user: user }).then(function(response) {
         </div>
         <Account />
       </header>
-      <City />
+      <div style = {{ borderStyle: "solid" }}>
+        <City />
+      </div>
     </div>
     <Overlay />
   </react.StrictMode>)
@@ -79,6 +84,11 @@ function render(components, push, path) {
     if (path) {
       window.history.pushState(push, undefined, path)
     }
+    if (window.history.state.user) {
+      document.title = window.history.state.name
+    } else {
+      document.title = "Bookmark City"
+    }
     search.current.value = ""
     terms = undefined
   }
@@ -93,7 +103,7 @@ function onMouseDown(event) {
   }
 }
 async function onClick(index) {
-  let path = "/" + index
+  path = "/" + index
   if (users[index][0]) {
     window.history.pushState(users[index][0], undefined, path)
     users[index][0].open = true
@@ -117,12 +127,12 @@ function onDragStart(index) {
 }
 function onDragOver(event, index) {
   if (authenticated && (index !== undefined || !traveler)) {
+    event.preventDefault()
     let box = event.target.getBoundingClientRect()
     let mouse = 4 * event.clientY
     high = 3 * box.top + box.bottom > mouse
     low = box.top + 3 * box.bottom < mouse
     if (traveler) {
-      event.preventDefault()
       let origin = users[window.history.state.user][traveler].order
       let destination = users[window.history.state.user][index].order
       let direction = Math.sign(origin - destination)
@@ -135,48 +145,46 @@ function onDragOver(event, index) {
   }
 }
 function onDrop(event, index) {
-  if (authenticated) {
-    event.preventDefault()
-    if (traveler) {
-      if (index !== traveler && index !== undefined) {
-        users[window.history.state.user][traveler].order = users[window.history.state.user][index].end++
-        users[window.history.state.user][traveler].parent = index
-        axios.put("/itemsUpdate", users[window.history.state.user][traveler])
-        delete users[window.history.state.user][window.history.state.index].children[traveler]
-        for (let index in users[window.history.state.user][window.history.state.index].children) {
-          users[window.history.state.user][index].order = users[window.history.state.user][index].origin
-        }
-        users[window.history.state.user][index].children[traveler] = true
-        traveler = undefined
-        render(["Folders"])
+  event.preventDefault()
+  if (traveler) {
+    if (index !== traveler && index !== undefined) {
+      users[window.history.state.user][traveler].order = users[window.history.state.user][index].end++
+      users[window.history.state.user][traveler].parent = index
+      axios.put("/itemsUpdate", users[window.history.state.user][traveler])
+      delete users[window.history.state.user][window.history.state.index].children[traveler]
+      for (let index in users[window.history.state.user][window.history.state.index].children) {
+        users[window.history.state.user][index].order = users[window.history.state.user][index].origin
       }
-    } else {
-      let address = event.dataTransfer.getData("text")
-      if (address.startsWith("http")) {
-        let order
-        if (users[window.history.state.user][window.history.state.index].children[index] && (users[window.history.state.user][index].address || high || low)) {
-          order = users[window.history.state.user][index].order
-          if (low && !users[window.history.state.user][index].address) {
-            ++order
-          }
-          shift(users[window.history.state.user][window.history.state.index].end++, 1, order)
-        } else if (index === undefined) {
-          order = users[window.history.state.user][window.history.state.index].end++
-        }
-        if (order === undefined) {
-          item = { user: window.history.state.user, index: users[window.history.state.user].length, parent: index, order: users[window.history.state.user][index].end++, name: "", description: "", address: address }
-          users[window.history.state.user][index].children[users[window.history.state.user].length] = true
-        } else {
-          item = { user: window.history.state.user, index: users[window.history.state.user].length, parent: window.history.state.index, order: order, name: "", description: "", address: address }
-          users[window.history.state.user][window.history.state.index].children[users[window.history.state.user].length] = true
-          imported = String(users[window.history.state.user].length)
-        }
-        users[window.history.state.user].push(item)
-        arrange(item)
-      }
+      users[window.history.state.user][index].children[traveler] = true
+      traveler = undefined
+      render(["Folders"])
     }
-    render(["Items"])
+  } else {
+    let address = event.dataTransfer.getData("text")
+    if (address.startsWith("http")) {
+      let order
+      if (users[window.history.state.user][window.history.state.index].children[index] && (users[window.history.state.user][index].address || high || low)) {
+        order = users[window.history.state.user][index].order
+        if (low && !users[window.history.state.user][index].address) {
+          ++order
+        }
+        shift(users[window.history.state.user][window.history.state.index].end++, 1, order)
+      } else if (index === undefined) {
+        order = users[window.history.state.user][window.history.state.index].end++
+      }
+      if (order === undefined) {
+        item = { user: window.history.state.user, index: users[window.history.state.user].length, parent: index, order: users[window.history.state.user][index].end++, name: "", description: "", address: address }
+        users[window.history.state.user][index].children[users[window.history.state.user].length] = true
+      } else {
+        item = { user: window.history.state.user, index: users[window.history.state.user].length, parent: window.history.state.index, order: order, name: "", description: "", address: address }
+        users[window.history.state.user][window.history.state.index].children[users[window.history.state.user].length] = true
+        imported = String(users[window.history.state.user].length)
+      }
+      users[window.history.state.user].push(item)
+      arrange(item)
+    }
   }
+  render(["Items"])
 }
 function onDragEnd() {
   if (traveler) {
@@ -309,7 +317,7 @@ function Ancestry() {
   let buttons = []
   for (let index in ancestors.reverse()) {
     buttons.push(<button key = {index} onClick = {function() {
-      let path = ""
+      path = ""
       for (let index2 in ancestors) {
         path += "/" + users[window.history.state.user][ancestors[index2]].name
         if (index2 === index) {
@@ -337,9 +345,9 @@ function Search() {
   return <input ref = {search} placeholder = {"search"} onChange = {function() {
     terms = search.current.value.toUpperCase().split(" ")
     if (window.history.state.user) {
-      render(["Items"])
+      render(["Items"]) // could these two be combined?
     } else {
-      render(["City"])
+      render(["Users"])
     }
   }} />
 }
@@ -437,32 +445,11 @@ function Account() {
 }
 function City() {
   state.City = react.useState()
-  let user = react.useRef()
+  user = react.useRef()
   let password = react.useRef()
   let confirm = react.useRef()
   if (window.history.state.user) {
     return <Main />
-  }
-  document.title = "Bookmark City"
-  let city = []
-  loop: for (let index in users) {
-    let user = index.toUpperCase()
-    let description = descriptions[index].toUpperCase()
-    for (let index in terms) {
-      if (!(user.includes(terms[index]) || description.includes(terms[index]))) {
-        continue loop
-      }
-    }
-    city.push(<button key = {index} className = {"folder"} onClick = {function() {
-      onClick(index)
-    }}>
-      <div style = {{ fontWeight: "bold" }}>
-        {index}
-      </div>
-      <div>
-        {descriptions[index]}
-      </div>
-    </button>)
   }
   let create
   if (!localStorage.user) {
@@ -496,16 +483,38 @@ function City() {
       </button>
     </form>
   }
-  return <div style = {{ borderStyle: "solid" }}>
-    {city}
+  return <>
+    <Users />
     {create}
-  </div>
+  </>
 }
-function Main() { // the relationship between City, Main, and Items is confused and buggy. work this out
+function Users() {
+  state.Users = react.useState()
+  let list = []
+  loop: for (let index in users) {
+    let user = index.toUpperCase()
+    let description = descriptions[index].toUpperCase()
+    for (let index in terms) {
+      if (!(user.includes(terms[index]) || description.includes(terms[index]))) {
+        continue loop
+      }
+    }
+    list.push(<button key = {index} className = {"folder"} onClick = {function() {
+      onClick(index)
+    }}>
+      <div style = {{ fontWeight: "bold" }}>
+        {index}
+      </div>
+      <div>
+        {descriptions[index]}
+      </div>
+    </button>)
+  }
+  return list
+}
+function Main() {
   state.Main = react.useState()
-  document.title = window.history.state.name
   authenticated = window.history.state.user === localStorage.user
-  imported = false
   let create
   if (authenticated) {
     create = <>
@@ -513,10 +522,10 @@ function Main() { // the relationship between City, Main, and Items is confused 
       <Content create = {"folder"} />
     </>
   }
-  return <div style = {{ borderStyle: "solid" }}>
+  return <>
     <Items />
     {create}
-  </div>
+  </>
 }
 function Items() {
   state.Items = react.useState()
@@ -700,7 +709,7 @@ function Settings() {
       descriptions[localStorage.user] = description.current.value
       overlay = undefined
       if (!window.history.state.user) {
-        render(["City"])
+        render(["Users"])
       }
       render(["Overlay"])
     }}>
@@ -741,7 +750,7 @@ function Settings() {
             window.history.replaceState({}, undefined, "/")
             render(["Nav", "City"], true)
           } else if (!window.history.state.user) {
-            render(["Nav", "City"])
+            render(["Nav", "Users"])
           }
           render(["Folders", "Account", "Overlay"])
         } else {
@@ -759,7 +768,7 @@ function Settings() {
     </form>
   </div>
 }
-function Deleter() { // maybe fields to add a new user or item would be better if they were a separate component (or two) that works like this one. maybe also the edit button.
+function Deleter() {
   state.Deleter = react.useState()
   return deleter
 }
