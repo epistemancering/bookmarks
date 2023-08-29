@@ -505,6 +505,7 @@ function Main() { // the relationship between City, Main, and Items is confused 
   state.Main = react.useState()
   document.title = window.history.state.name
   authenticated = window.history.state.user === localStorage.user
+  imported = false
   let create
   if (authenticated) {
     create = <>
@@ -512,7 +513,6 @@ function Main() { // the relationship between City, Main, and Items is confused 
       <Content create = {"folder"} />
     </>
   }
-  imported = false
   return <div style = {{ borderStyle: "solid" }}>
     <Items />
     {create}
@@ -555,7 +555,7 @@ function Items() {
     (nothing here)
   </div>
 }
-function Content(props) { // revisit this, just all of this
+function Content(props) {
   let autoFocus = props.index === imported
   let editing = react.useState(props.create || autoFocus)
   let name = react.useRef()
@@ -573,14 +573,6 @@ function Content(props) { // revisit this, just all of this
     if (bookmark) {
       input = <input ref = {address} defaultValue = {users[window.history.state.user][props.index]?.address} placeholder = {"address"} />
     }
-    let content = <>
-      <input ref = {name} defaultValue = {users[window.history.state.user][props.index]?.name} placeholder = {"name"} autoFocus = {autoFocus} />
-      <input ref = {description} defaultValue = {users[window.history.state.user][props.index]?.description} placeholder = {"description"} />
-      {input}
-      <button>
-        {button}
-      </button>
-    </>
     return <form className = {"item"} onSubmit = {function(event) {
       event.preventDefault()
       if (bookmark) {
@@ -626,18 +618,26 @@ function Content(props) { // revisit this, just all of this
     }} onDrop = {function(event) {
       onDrop(event, props.index)
     }}>
-      {content}
+      <input ref = {name} defaultValue = {users[window.history.state.user][props.index]?.name} placeholder = {"name"} autoFocus = {autoFocus} />
+      <input ref = {description} defaultValue = {users[window.history.state.user][props.index]?.description} placeholder = {"description"} />
+      {input}
+      <button>
+        {button}
+      </button>
     </form>
   }
+  let label = <>
+    <div style = {{ fontWeight: "bold" }}>
+      {users[window.history.state.user][props.index].name}
+    </div>
+    <div>
+      {users[window.history.state.user][props.index].description}
+    </div>
+  </>
   if (users[window.history.state.user][props.index].address) {
     content = <div className = {"item bookmark"}>
       <img src = {"https://www.google.com/s2/favicons?domain=" + users[window.history.state.user][props.index].address} style = {{ height: "16px", width: "16px" }} />
-      <div style = {{ fontWeight: "bold" }}>
-        {users[window.history.state.user][props.index].name}
-      </div>
-      <div>
-        {users[window.history.state.user][props.index].description}
-      </div>
+      {label}
       <a target = {"_blank"} href = {users[window.history.state.user][props.index].address} onDragStart = {function() {
         onDragStart(props.index)
       }} onDragOver = {function(event) {
@@ -661,12 +661,7 @@ function Content(props) { // revisit this, just all of this
     }} onDrop = {function(event) {
       onDrop(event, props.index)
     }} onDragEnd = {onDragEnd}>
-      <div style = {{ fontWeight: "bold" }}>
-        {users[window.history.state.user][props.index].name}
-      </div>
-      <div>
-        {users[window.history.state.user][props.index].description}
-      </div>
+      {label}
     </button>
   }
   if (authenticated) {
@@ -764,7 +759,7 @@ function Settings() {
     </form>
   </div>
 }
-function Deleter() { // seems there are other components that would be better if they worked like this one
+function Deleter() { // maybe fields to add a new user or item would be better if they were a separate component (or two) that works like this one. maybe also the edit button.
   state.Deleter = react.useState()
   return deleter
 }
