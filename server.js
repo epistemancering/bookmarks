@@ -9,7 +9,7 @@ let database = new sequelize(keys.database, {
         ssl: { rejectUnauthorized: false }
     }
 })
-let users = database.define("users", { user: sequelize.DataTypes.TEXT, description: sequelize.DataTypes.TEXT, password: sequelize.DataTypes.TEXT })
+let users = database.define("users", { size: sequelize.DataTypes.DOUBLE, user: sequelize.DataTypes.TEXT, description: sequelize.DataTypes.TEXT, password: sequelize.DataTypes.TEXT })
 let items = database.define("items", { user: sequelize.DataTypes.TEXT, index: sequelize.DataTypes.DOUBLE, parent: sequelize.DataTypes.DOUBLE, order: sequelize.DataTypes.DOUBLE, name: sequelize.DataTypes.TEXT, description: sequelize.DataTypes.TEXT, address: sequelize.DataTypes.TEXT, public: sequelize.DataTypes.BOOLEAN, shortcut: sequelize.DataTypes.DOUBLE })
 let tags = database.define("tags", { name: sequelize.DataTypes.TEXT, item: sequelize.DataTypes.DOUBLE })
 let shares = database.define("shares", { user: sequelize.DataTypes.TEXT, item: sequelize.DataTypes.DOUBLE })
@@ -63,22 +63,26 @@ api.use(function(request, response, next) {
         }
     } catch {}
 })
-api.put("/createUpdate", function(request, response) {
+api.put("/createIncrementUpdate", function(request, response) {
     response.sendStatus(200)
     if (request.body.item) {
         items.create(request.body.item)
+        if (request.body.item.address) {
+            users.increment("size", filter(request.body.item.user))
+        }
     }
     for (let index in request.body.indices) {
         items.update({ order: request.body.orders[index] }, filter(user, request.body.indices[index]))
     }
 })
-api.put("/itemsUpdate", function(request, response) {
+api.put("/itemsUpdate", function(request, response) { // this should be combined with createUpdate
     response.sendStatus(200)
     items.update(request.body, filter(user, request.body.index))
 })
-api.put("/destroy", function(request, response) {
+api.put("/destroyIncrement", function(request, response) {
     response.sendStatus(200)
-    items.destroy(filter(user, request.body))
+    items.destroy(filter(user, request.body.destroyed))
+    users.increment({ size: request.body.reduction }, filter(user))
 })
 api.put("/usersUpdate", function(request, response) {
     response.sendStatus(200)
@@ -99,4 +103,8 @@ api.put("/findDestroy", function(request, response) {
 })
 database.sync().then(function() {
     api.listen(3000)
+    users.findAll(filter("austin")).then(function(resolution) {
+        console.log(resolution)
+    })
+    // users.update({ size: 12 }, filter("austin"))
 })

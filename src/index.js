@@ -52,7 +52,7 @@ axios.post("/find", { user: user }).then(function(response) {
 let users = {}
 let descriptions = {}
 let state = {}
-let authenticated, search, terms, item, overlay, traveler, high, low, destroyed, deleter
+let authenticated, search, terms, item, overlay, traveler, high, low, destroying, increment, deleter
 axios.defaults.headers.user = localStorage.user
 axios.defaults.headers.token = localStorage.token
 let imported = false
@@ -206,13 +206,17 @@ function arrange(item) {
     indices.push(index)
     orders.push(users[window.history.state.user][index].order)
   }
-  axios.put("/createUpdate", { item: item, indices: indices, orders: orders })
+  axios.put("/createIncrementUpdate", { item: item, indices: indices, orders: orders })
 }
-function destroy(parent) {
-  for (let index in users[window.history.state.user][parent].children) {
-    destroy(index)
+function destroy(item) {
+  if (users[window.history.state.user][item].address) {
+    --increment
+  } else {
+    for (let index in users[window.history.state.user][item].children) {
+      destroy(index)
+    }
   }
-  destroyed.push(parent)
+  destroying.push(item)
 }
 function reject(password) {
   alert("Incorrect password.")
@@ -461,7 +465,7 @@ function City() {
           alert("Name must be unique.")
           user.current.focus()
         } else if (password.current.value === confirm.current.value) {
-          axios.post("/create", { user: user.current.value, description: "", password: password.current.value }).then(function(response) {
+          axios.post("/create", { size: 0, user: user.current.value, description: "", password: password.current.value }).then(function(response) {
             localStorage.token = axios.defaults.headers.token = response.data
           })
           users[user.current.value] = [{ user: user.current.value, index: 0, name: user.current.value, children: [], end: 0, open: true }]
@@ -542,9 +546,10 @@ function Items() {
     let button
     if (authenticated) {
       button = <button onClick = {function() {
-        destroyed = []
+        increment = 0
+        destroying = []
         destroy(index)
-        axios.put("/destroy", destroyed)
+        axios.put("/destroyIncrement", { destroy: destroying, increment: increment })
         delete users[window.history.state.user][window.history.state.index].children[index]
         window.history.replaceState(users[window.history.state.user][window.history.state.index], undefined)
         render(["Folders", "Items"])
@@ -607,7 +612,7 @@ function Content(props) {
             address.current.value = ""
           }
           name.current.focus()
-          axios.put("/createUpdate", { item: item })
+          axios.put("/createIncrementUpdate", { item: item })
           users[window.history.state.user][window.history.state.index].children[users[window.history.state.user].length] = true
           users[window.history.state.user].push(item)
           render(["Folders", "Items"])
