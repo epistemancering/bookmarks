@@ -65,24 +65,20 @@ api.use(function(request, response, next) {
 })
 api.put("/createIncrementUpdate", function(request, response) {
     response.sendStatus(200)
-    if (request.body.item) {
-        items.create(request.body.item)
-        if (request.body.item.address) {
-            users.increment("size", filter(request.body.item.user))
+    if (request.body.create) {
+        items.create(request.body.create)
+        if (request.body.create.address) {
+            users.increment("size", filter(user))
         }
     }
-    for (let index in request.body.indices) {
-        items.update({ order: request.body.orders[index] }, filter(user, request.body.indices[index]))
+    for (let index in request.body.update) {
+        items.update(request.body.update[index], filter(user, request.body.update[index].index))
     }
-})
-api.put("/itemsUpdate", function(request, response) { // this should be combined with createUpdate
-    response.sendStatus(200)
-    items.update(request.body, filter(user, request.body.index))
 })
 api.put("/destroyIncrement", function(request, response) {
     response.sendStatus(200)
-    items.destroy(filter(user, request.body.destroyed))
-    users.increment({ size: request.body.reduction }, filter(user))
+    items.destroy(filter(user, request.body.destroy))
+    users.increment({ size: request.body.increment }, filter(user))
 })
 api.put("/usersUpdate", function(request, response) {
     response.sendStatus(200)
@@ -103,8 +99,4 @@ api.put("/findDestroy", function(request, response) {
 })
 database.sync().then(function() {
     api.listen(3000)
-    users.findAll(filter("austin")).then(function(resolution) {
-        console.log(resolution)
-    })
-    // users.update({ size: 12 }, filter("austin"))
 })

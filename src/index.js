@@ -150,7 +150,7 @@ function onDrop(event, index) {
     if (index !== traveler && index !== undefined) {
       users[window.history.state.user][traveler].order = users[window.history.state.user][index].end++
       users[window.history.state.user][traveler].parent = index
-      axios.put("/itemsUpdate", users[window.history.state.user][traveler])
+      axios.put("/createIncrementUpdate", { update: [users[window.history.state.user][traveler]] })
       delete users[window.history.state.user][window.history.state.index].children[traveler]
       for (let index in users[window.history.state.user][window.history.state.index].children) {
         users[window.history.state.user][index].order = users[window.history.state.user][index].origin
@@ -199,14 +199,12 @@ function shift(origin, direction, destination) {
     }
   }
 }
-function arrange(item) {
-  let indices = []
-  let orders = []
+function arrange(create) {
+  let update = []
   for (let index in users[window.history.state.user][window.history.state.index].children) {
-    indices.push(index)
-    orders.push(users[window.history.state.user][index].order)
+    update.push(users[window.history.state.user][index])
   }
-  axios.put("/createIncrementUpdate", { item: item, indices: indices, orders: orders })
+  axios.put("/createIncrementUpdate", { create: create, update: update })
 }
 function destroy(item) {
   if (users[window.history.state.user][item].address) {
@@ -612,7 +610,7 @@ function Content(props) {
             address.current.value = ""
           }
           name.current.focus()
-          axios.put("/createIncrementUpdate", { item: item })
+          axios.put("/createIncrementUpdate", { create: item })
           users[window.history.state.user][window.history.state.index].children[users[window.history.state.user].length] = true
           users[window.history.state.user].push(item)
           render(["Folders", "Items"])
@@ -620,7 +618,7 @@ function Content(props) {
           users[window.history.state.user][props.index].name = name.current.value
           users[window.history.state.user][props.index].description = description.current.value
           users[window.history.state.user][props.index].address = address.current?.value
-          axios.put("/itemsUpdate", users[window.history.state.user][props.index])
+          axios.put("/createIncrementUpdate", { update: [users[window.history.state.user][props.index]] })
           render(["Folders"])
           editing[1]()
         }
