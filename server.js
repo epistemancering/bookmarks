@@ -38,7 +38,7 @@ api.get("*", function(request, response) {
 })
 api.post("/find", async function(request, response) {
     response.send(await Promise.all([
-        users.findAll({ order: ["createdAt"], attributes: ["user", "description"] }),
+        users.findAll({ order: [["size", "desc"]], attributes: ["user", "description"] }),
         items.findAll(filter(request.body.user))
     ]))
 })
