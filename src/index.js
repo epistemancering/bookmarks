@@ -28,10 +28,10 @@ axios.post("/find", { user: user }).then(function(response) {
     document.title = "Bookmark City"
   }
   reactDom.createRoot(document.querySelector("div")).render(<react.StrictMode>
-    <ul className = {"navigation"} style = {{ width: "max(194px, calc(25% - 160px))", padding: "48px" }}> {/* revisit width */}
+    <ul className = {"navigation"} style = {{ width: "max(201px, calc(22% - 96px))", padding: "48px" }}>
       <Folders />
     </ul>
-    <div style = {{ width: "max(734px, 50%)" }}>
+    <div style = {{ width: "max(756px, 56%)" }}>
       <header style = {{ height: "51px", padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <nav>
           <Nav />
@@ -48,178 +48,6 @@ axios.post("/find", { user: user }).then(function(response) {
     <Overlay />
   </react.StrictMode>)
 })
-let users = {}
-let descriptions = {}
-let state = {}
-let authenticated, search, terms, item, overlay, traveler, high, low, destroying, increment, deleter
-axios.defaults.headers.user = localStorage.user
-axios.defaults.headers.token = localStorage.token
-let imported = false
-window.onpopstate = function() {
-  render(["Nav", "Account", "City"], true)
-}
-function cache(user, items, navigate) {
-  users[user] = [{ user: user, index: 0, name: user, children: [], end: [] }]
-  for (let index in items) {
-    items[index].children = []
-    items[index].end = []
-    users[user][items[index].index] = items[index]
-  }
-  for (let index in users[user]) {
-    if (index !== "0") {
-      users[user][users[user][index].parent].children[index] = users[user][users[user][index].parent].end[users[user][index].order] = true
-    }
-  }
-  for (let index in users[user]) {
-    users[user][index].end = users[user][index].end.length
-  }
-  if (navigate) {
-    users[user][0].open = true
-    window.history.replaceState(users[user][0], undefined, "/" + user)
-  }
-}
-function render(components, push, path) {
-  if (push) {
-    if (path) {
-      window.history.pushState(push, undefined, path)
-    }
-    if (window.history.state.user) {
-      document.title = window.history.state.name
-    } else {
-      document.title = "Bookmark City"
-    }
-    search.current.value = ""
-    terms = undefined
-  }
-  for (let index in components) {
-    state[components[index]][1]({})
-  }
-}
-function onMouseDown(event) {
-  if (event.target === event.currentTarget) {
-    overlay = undefined
-    render(["Overlay"])
-  }
-}
-async function onClick(index) {
-  path = "/" + index
-  if (users[index][0]) {
-    window.history.pushState(users[index][0], undefined, path)
-    users[index][0].open = true
-  } else {
-    window.history.pushState({ user: index }, undefined, path)
-    cache(index, (await axios.post("/itemsFind", window.history.state)).data, true)
-  }
-  render(["Folders", "Nav", "Account", "City"], true)
-}
-function mismatch(error, password, confirm) {
-  alert(error)
-  password.current.value = ""
-  confirm.current.value = ""
-  password.current.focus()
-}
-function onDragStart(index) {
-  traveler = index
-  for (let index in users[window.history.state.user][window.history.state.index].children) {
-    users[window.history.state.user][index].origin = users[window.history.state.user][index].order
-  }
-}
-function onDragOver(event, index) {
-  if (authenticated && (index !== undefined || !traveler)) {
-    event.preventDefault()
-    let box = event.target.getBoundingClientRect()
-    let mouse = 4 * event.clientY
-    high = 3 * box.top + box.bottom > mouse
-    low = box.top + 3 * box.bottom < mouse
-    if (traveler) {
-      let origin = users[window.history.state.user][traveler].order
-      let destination = users[window.history.state.user][index].order
-      let direction = Math.sign(origin - destination)
-      if (users[window.history.state.user][index].address || (high && direction === 1) || (low && direction === -1)) {
-        shift(origin - direction, direction, destination)
-        users[window.history.state.user][traveler].order = destination
-        render(["Folders", "Items"])
-      }
-    }
-  }
-}
-function onDrop(event, index) {
-  event.preventDefault()
-  if (traveler) {
-    if (index !== traveler && index !== undefined) {
-      users[window.history.state.user][traveler].order = users[window.history.state.user][index].end++
-      users[window.history.state.user][traveler].parent = index
-      axios.put("/createIncrementUpdate", { update: [users[window.history.state.user][traveler]] })
-      delete users[window.history.state.user][window.history.state.index].children[traveler]
-      for (let index in users[window.history.state.user][window.history.state.index].children) {
-        users[window.history.state.user][index].order = users[window.history.state.user][index].origin
-      }
-      users[window.history.state.user][index].children[traveler] = true
-      traveler = undefined
-      render(["Folders"])
-    }
-  } else {
-    let address = event.dataTransfer.getData("text")
-    if (address.startsWith("http")) {
-      let order
-      if (users[window.history.state.user][window.history.state.index].children[index] && (users[window.history.state.user][index].address || high || low)) {
-        order = users[window.history.state.user][index].order
-        if (low && !users[window.history.state.user][index].address) {
-          ++order
-        }
-        shift(users[window.history.state.user][window.history.state.index].end++, 1, order)
-      } else if (index === undefined) {
-        order = users[window.history.state.user][window.history.state.index].end++
-      }
-      if (order === undefined) {
-        item = { user: window.history.state.user, index: users[window.history.state.user].length, parent: index, order: users[window.history.state.user][index].end++, name: "", description: "", address: address }
-        users[window.history.state.user][index].children[users[window.history.state.user].length] = true
-      } else {
-        item = { user: window.history.state.user, index: users[window.history.state.user].length, parent: window.history.state.index, order: order, name: "", description: "", address: address }
-        users[window.history.state.user][window.history.state.index].children[users[window.history.state.user].length] = true
-        imported = String(users[window.history.state.user].length)
-      }
-      users[window.history.state.user].push(item)
-      arrange(item)
-    }
-  }
-  render(["Items"])
-}
-function onDragEnd() {
-  if (traveler) {
-    arrange()
-    traveler = undefined
-  }
-}
-function shift(origin, direction, destination) {
-  for (let index in users[window.history.state.user][window.history.state.index].children) {
-    if ((Math.sign(users[window.history.state.user][index].order - origin) !== direction) && (Math.sign(destination - users[window.history.state.user][index].order) !== direction)) {
-      users[window.history.state.user][index].order += direction
-    }
-  }
-}
-function arrange(create) {
-  let update = []
-  for (let index in users[window.history.state.user][window.history.state.index].children) {
-    update.push(users[window.history.state.user][index])
-  }
-  axios.put("/createIncrementUpdate", { create: create, update: update })
-}
-function destroy(item) {
-  if (users[window.history.state.user][item].address) {
-    --increment
-  } else {
-    for (let index in users[window.history.state.user][item].children) {
-      destroy(index)
-    }
-  }
-  destroying.push(item)
-}
-function reject(password) {
-  alert("Incorrect password.")
-  password.current.value = ""
-  password.current.focus()
-}
 function Folders() {
   state.Folders = react.useState()
   let folders = []
@@ -346,7 +174,7 @@ function Search() {
   return <input ref = {search} placeholder = {"search"} onChange = {function() {
     terms = search.current.value.toUpperCase().split(" ")
     if (window.history.state.user) {
-      render(["Items"]) // could these two be combined?
+      render(["Items"])
     } else {
       render(["Users"])
     }
@@ -773,4 +601,176 @@ function Settings() {
 function Deleter() {
   state.Deleter = react.useState()
   return deleter
+}
+function cache(user, items, navigate) {
+  users[user] = [{ user: user, index: 0, name: user, children: [], end: [] }]
+  for (let index in items) {
+    items[index].children = []
+    items[index].end = []
+    users[user][items[index].index] = items[index]
+  }
+  for (let index in users[user]) {
+    if (index !== "0") {
+      users[user][users[user][index].parent].children[index] = users[user][users[user][index].parent].end[users[user][index].order] = true
+    }
+  }
+  for (let index in users[user]) {
+    users[user][index].end = users[user][index].end.length
+  }
+  if (navigate) {
+    users[user][0].open = true
+    window.history.replaceState(users[user][0], undefined, "/" + user)
+  }
+}
+function render(components, push, path) {
+  if (push) {
+    if (path) {
+      window.history.pushState(push, undefined, path)
+    }
+    if (window.history.state.user) {
+      document.title = window.history.state.name
+    } else {
+      document.title = "Bookmark City"
+    }
+    search.current.value = ""
+    terms = undefined
+  }
+  for (let index in components) {
+    state[components[index]][1]({})
+  }
+}
+function onMouseDown(event) {
+  if (event.target === event.currentTarget) {
+    overlay = undefined
+    render(["Overlay"])
+  }
+}
+async function onClick(index) {
+  path = "/" + index
+  if (users[index][0]) {
+    window.history.pushState(users[index][0], undefined, path)
+    users[index][0].open = true
+  } else {
+    window.history.pushState({ user: index }, undefined, path)
+    cache(index, (await axios.post("/itemsFind", window.history.state)).data, true)
+  }
+  render(["Folders", "Nav", "Account", "City"], true)
+}
+function mismatch(error, password, confirm) {
+  alert(error)
+  password.current.value = ""
+  confirm.current.value = ""
+  password.current.focus()
+}
+function onDragStart(index) {
+  traveler = index
+  for (let index in users[window.history.state.user][window.history.state.index].children) {
+    users[window.history.state.user][index].origin = users[window.history.state.user][index].order
+  }
+}
+function onDragOver(event, index) {
+  if (authenticated && (index !== undefined || !traveler)) {
+    event.preventDefault()
+    let box = event.target.getBoundingClientRect()
+    let mouse = 4 * event.clientY
+    high = 3 * box.top + box.bottom > mouse
+    low = box.top + 3 * box.bottom < mouse
+    if (traveler) {
+      let origin = users[window.history.state.user][traveler].order
+      let destination = users[window.history.state.user][index].order
+      let direction = Math.sign(origin - destination)
+      if (users[window.history.state.user][index].address || (high && direction === 1) || (low && direction === -1)) {
+        shift(origin - direction, direction, destination)
+        users[window.history.state.user][traveler].order = destination
+        render(["Folders", "Items"])
+      }
+    }
+  }
+}
+function onDrop(event, index) {
+  event.preventDefault()
+  if (traveler) {
+    if (index !== traveler && index !== undefined) {
+      users[window.history.state.user][traveler].order = users[window.history.state.user][index].end++
+      users[window.history.state.user][traveler].parent = index
+      axios.put("/createIncrementUpdate", { update: [users[window.history.state.user][traveler]] })
+      delete users[window.history.state.user][window.history.state.index].children[traveler]
+      for (let index in users[window.history.state.user][window.history.state.index].children) {
+        users[window.history.state.user][index].order = users[window.history.state.user][index].origin
+      }
+      users[window.history.state.user][index].children[traveler] = true
+      traveler = undefined
+      render(["Folders"])
+    }
+  } else {
+    let address = event.dataTransfer.getData("text")
+    if (address.startsWith("http")) {
+      let order
+      if (users[window.history.state.user][window.history.state.index].children[index] && (users[window.history.state.user][index].address || high || low)) {
+        order = users[window.history.state.user][index].order
+        if (low && !users[window.history.state.user][index].address) {
+          ++order
+        }
+        shift(users[window.history.state.user][window.history.state.index].end++, 1, order)
+      } else if (index === undefined) {
+        order = users[window.history.state.user][window.history.state.index].end++
+      }
+      if (order === undefined) {
+        item = { user: window.history.state.user, index: users[window.history.state.user].length, parent: index, order: users[window.history.state.user][index].end++, name: "", description: "", address: address }
+        users[window.history.state.user][index].children[users[window.history.state.user].length] = true
+      } else {
+        item = { user: window.history.state.user, index: users[window.history.state.user].length, parent: window.history.state.index, order: order, name: "", description: "", address: address }
+        users[window.history.state.user][window.history.state.index].children[users[window.history.state.user].length] = true
+        imported = String(users[window.history.state.user].length)
+      }
+      users[window.history.state.user].push(item)
+      arrange(item)
+    }
+  }
+  render(["Items"])
+}
+function onDragEnd() {
+  if (traveler) {
+    arrange()
+    traveler = undefined
+  }
+}
+function shift(origin, direction, destination) {
+  for (let index in users[window.history.state.user][window.history.state.index].children) {
+    if ((Math.sign(users[window.history.state.user][index].order - origin) !== direction) && (Math.sign(destination - users[window.history.state.user][index].order) !== direction)) {
+      users[window.history.state.user][index].order += direction
+    }
+  }
+}
+function arrange(create) {
+  let update = []
+  for (let index in users[window.history.state.user][window.history.state.index].children) {
+    update.push(users[window.history.state.user][index])
+  }
+  axios.put("/createIncrementUpdate", { create: create, update: update })
+}
+function destroy(item) {
+  if (users[window.history.state.user][item].address) {
+    --increment
+  } else {
+    for (let index in users[window.history.state.user][item].children) {
+      destroy(index)
+    }
+  }
+  destroying.push(item)
+}
+function reject(password) {
+  alert("Incorrect password.")
+  password.current.value = ""
+  password.current.focus()
+}
+let users = {}
+let descriptions = {}
+let state = {}
+let authenticated, search, terms, item, overlay, traveler, high, low, destroying, increment, deleter
+axios.defaults.headers.user = localStorage.user
+axios.defaults.headers.token = localStorage.token
+let imported = false
+window.onpopstate = function() {
+  render(["Nav", "Account", "City"], true)
 }
