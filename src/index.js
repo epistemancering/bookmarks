@@ -27,104 +27,36 @@ axios.post("/find", { user: user }).then(function(response) {
     window.history.replaceState({}, undefined, "/")
     document.title = "Bookmark City"
   }
+  // should randomize colors and allow users to set a preferred color
   reactDom.createRoot(document.querySelector("div")).render(<react.StrictMode>
-    <ul className = {"navigation"} style = {{ width: "max(201px, calc(22% - 96px))", padding: "48px" }}>
-      <Folders />
-    </ul>
-    <div style = {{ width: "max(756px, 56%)" }}>
-      <header style = {{ height: "51px", padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <nav>
-          <Nav />
-        </nav>
-        <div>
-          <Search />
+    <header style = {{ height: "51px", borderBottomStyle: "solid", borderColor: "hsl(347, 83%, 58%)", backgroundColor: "hsl(347, 83%, 81%)", padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <nav>
+        <Nav />
+      </nav>
+      <div>
+        <Search />
+      </div>
+      <Account />
+    </header>
+    <div style = {{ display: "flex", minHeight: "calc(100vh - 86px)" }}>
+      <ul className = {"navigation"} style = {{ listStyleType: "none", margin: 0, borderRightStyle: "solid", borderColor: "hsl(347, 83%, 58%)", padding: "16px", backgroundColor: "hsl(347, 83%, 89%)" }}>
+        <Folders />
+      </ul>
+      <div style = {{ width: "max(756px, 100%)"}}>
+        <div style = {{ margin: "16px", borderStyle: "solid" }}>
+          <City />
         </div>
-        <Account />
-      </header>
-      <div style = {{ borderStyle: "solid" }}>
-        <City />
       </div>
     </div>
     <Overlay />
   </react.StrictMode>)
 })
-function Folders() {
-  state.Folders = react.useState()
-  let folders = []
-  for (let index in users) {
-    folders.push(<li key = {index}>
-      <Folder user = {index} index = {0} path = {"/" + index} />
-    </li>)
-  }
-  return folders
-}
-function Folder(props) {
-  let state = react.useState()
-  let folders = []
-  let arrow, folder
-  if (users[props.user][0]) {
-    for (let index in users[props.user][props.index].children) {
-      if (!users[props.user][index].address) {
-        folders[users[props.user][index].order] = <li key = {index}>
-          <Folder user = {props.user} index = {index} path = {props.path + "/" + users[props.user][index].name} />
-        </li>
-      }
-    }
-    if (folders.length) {
-      if (users[props.user][props.index].open) {
-        arrow = <Arrow state = {state} user = {props.user} index = {props.index} arrow = {"v"} />
-      } else {
-        arrow = <Arrow state = {state} user = {props.user} index = {props.index} arrow = {">"} />
-        folders = undefined
-      }
-    }
-  } else {
-    arrow = <Arrow state = {state} user = {props.user} index = {props.index} arrow = {">"} />
-  }
-  if (props.index) {
-    folder = <button onClick = {function() {
-      users[props.user][props.index].open = true
-      render(["Nav", "Account", "City"], users[props.user][props.index], props.path)
-      state[1]({})
-    }}>
-      {users[props.user][props.index].name}
-    </button>
-  } else {
-    folder = <button onClick = {function() {
-      onClick(props.user)
-    }}>
-      {props.user}
-    </button>
-  }
-  return <>
-    <div style = {{ display: "flex" }}>
-      <div style = {{ width: "24px" }}>
-        {arrow}
-      </div>
-      {folder}
-    </div>
-    <ul>
-      {folders}
-    </ul>
-  </>
-}
-function Arrow(props) {
-  return <button onClick = {async function() {
-    if (!users[props.user][0]) {
-      cache(props.user, (await axios.post("/itemsFind", { user: props.user })).data)
-    }
-    users[props.user][props.index].open = !users[props.user][props.index].open
-    props.state[1]({})
-  }} style = {{ width: "100%" }}>
-    {props.arrow}
-  </button>
-}
 function Nav() {
   state.Nav = react.useState()
   if (window.history.state.user) {
     return <>
       <button onClick = {function() {
-        render(["Folders", "Nav", "Account", "City"], {}, "/")
+        render(["Nav", "Account", "Folders", "City"], {}, "/")
       }} style = {{ padding: "16px" }}>
         city
       </button>
@@ -210,7 +142,7 @@ function Account() {
       if (axios.defaults.headers.token) {
         localStorage.token = axios.defaults.headers.token
         localStorage.user = axios.defaults.headers.user = window.history.state.user
-        render(["Account", "Main"])
+        render(["Account", "Collection"])
       } else {
         reject(password)
       }
@@ -272,13 +204,84 @@ function Account() {
     about Bookmark City
   </button>
 }
+function Folders() {
+  state.Folders = react.useState()
+  let folders = []
+  for (let index in users) {
+    folders.push(<li key = {index}>
+      <Folder user = {index} index = {0} path = {"/" + index} />
+    </li>)
+  }
+  return folders
+}
+function Folder(props) {
+  let state = react.useState()
+  let folders = []
+  let arrow, folder
+  if (users[props.user][0]) {
+    for (let index in users[props.user][props.index].children) {
+      if (!users[props.user][index].address) {
+        folders[users[props.user][index].order] = <li key = {index}>
+          <Folder user = {props.user} index = {index} path = {props.path + "/" + users[props.user][index].name} />
+        </li>
+      }
+    }
+    if (folders.length) {
+      if (users[props.user][props.index].open) {
+        arrow = <Arrow state = {state} user = {props.user} index = {props.index} arrow = {"v"} />
+      } else {
+        arrow = <Arrow state = {state} user = {props.user} index = {props.index} arrow = {">"} />
+        folders = undefined
+      }
+    }
+  } else {
+    arrow = <Arrow state = {state} user = {props.user} index = {props.index} arrow = {">"} />
+  }
+  if (props.index) {
+    folder = <button onClick = {function() {
+      users[props.user][props.index].open = true
+      render(["Nav", "Account", "City"], users[props.user][props.index], props.path)
+      state[1]({})
+    }} style = {{ width: "100%", textAlign: "left", whiteSpace: "nowrap" }}>
+      {users[props.user][props.index].name}
+    </button>
+  } else {
+    folder = <button onClick = {function() {
+      onClick(props.user)
+    }} style = {{ width: "100%", textAlign: "left", whiteSpace: "nowrap" }}>
+      {props.user}
+    </button>
+  }
+  return <>
+    <div style = {{ display: "flex" }}>
+      <div style = {{ minWidth: "24px" }}>
+        {arrow}
+      </div>
+      {folder}
+    </div>
+    <ul>
+      {folders}
+    </ul>
+  </>
+}
+function Arrow(props) {
+  return <button onClick = {async function() {
+    if (!users[props.user][0]) {
+      cache(props.user, (await axios.post("/itemsFind", { user: props.user })).data)
+    }
+    users[props.user][props.index].open = !users[props.user][props.index].open
+    props.state[1]({})
+  }} style = {{ width: "24px" }}>
+    {props.arrow}
+  </button>
+}
 function City() {
   state.City = react.useState()
   user = react.useRef()
   let password = react.useRef()
   let confirm = react.useRef()
   if (window.history.state.user) {
-    return <Main />
+    return <Collection />
   }
   let create
   if (!localStorage.user) {
@@ -296,7 +299,7 @@ function City() {
           users[user.current.value] = [{ user: user.current.value, index: 0, name: user.current.value, children: [], end: 0, open: true }]
           descriptions[user.current.value] = ""
           localStorage.user = axios.defaults.headers.user = user.current.value
-          render(["Folders", "Nav", "Account", "City"], users[user.current.value][0], "/" + user.current.value)
+          render(["Nav", "Account", "Folders", "City"], users[user.current.value][0], "/" + user.current.value)
         } else {
           mismatch("Password and confirm password must be the same.", password, confirm)
         }
@@ -341,8 +344,8 @@ function Users() {
   }
   return list
 }
-function Main() {
-  state.Main = react.useState()
+function Collection() {
+  state.Collection = react.useState()
   authenticated = window.history.state.user === localStorage.user
   let create
   if (authenticated) {
@@ -492,7 +495,7 @@ function Content(props) {
   } else {
     content = <button className = {"folder"} onClick = {function() {
       users[window.history.state.user][props.index].open = true
-      render(["Folders", "Ancestry", "Items"], users[window.history.state.user][props.index], window.location.pathname + "/" + users[window.history.state.user][props.index].name)
+      render(["Ancestry", "Folders", "Items"], users[window.history.state.user][props.index], window.location.pathname + "/" + users[window.history.state.user][props.index].name)
     }} draggable = {authenticated} onDragStart = {function() {
       onDragStart(props.index)
     }} onDragOver = {function(event) {
@@ -571,7 +574,7 @@ function Settings() {
     <form onSubmit = {async function(event) {
       event.preventDefault()
       if (deleter) {
-        if ((await axios.put("/findDestroy", { password: deletePass.current.value })).data) {
+        if ((await axios.delete("/findDestroy", { password: deletePass.current.value })).data) {
           delete users[localStorage.user]
           delete localStorage.user
           delete localStorage.token
@@ -582,7 +585,7 @@ function Settings() {
           } else if (!window.history.state.user) {
             render(["Nav", "Users"])
           }
-          render(["Folders", "Account", "Overlay"])
+          render(["Account", "Folders", "Overlay"])
         } else {
           reject(deletePass)
         }
@@ -654,7 +657,7 @@ async function onClick(index) {
     window.history.pushState({ user: index }, undefined, path)
     cache(index, (await axios.post("/itemsFind", window.history.state)).data, true)
   }
-  render(["Folders", "Nav", "Account", "City"], true)
+  render(["Nav", "Account", "Folders", "City"], true)
 }
 function mismatch(error, password, confirm) {
   alert(error)
