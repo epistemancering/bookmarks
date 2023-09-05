@@ -27,9 +27,9 @@ axios.post("/find", { user: user }).then(function(response) {
     window.history.replaceState({}, undefined, "/")
     document.title = "Bookmark City"
   }
-  // should randomize colors and allow users to set a preferred color
+  // fix deletion bug
   reactDom.createRoot(document.querySelector("div")).render(<react.StrictMode>
-    <header style = {{ height: "51px", borderBottomStyle: "solid", borderColor: "hsl(347, 83%, 58%)", backgroundColor: "hsl(347, 83%, 81%)", padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <header style = {{ height: "51px", borderBottomStyle: "solid", borderColor: "hsl(" + hue + ", 83%, 58%)", backgroundColor: "hsl(" + hue + ", 83%, 81%)", padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
       <nav>
         <Nav />
       </nav>
@@ -39,7 +39,7 @@ axios.post("/find", { user: user }).then(function(response) {
       <Account />
     </header>
     <div style = {{ display: "flex", minHeight: "calc(100vh - 86px)" }}>
-      <ul className = {"navigation"} style = {{ listStyleType: "none", margin: 0, borderRightStyle: "solid", borderColor: "hsl(347, 83%, 58%)", padding: "16px", backgroundColor: "hsl(347, 83%, 89%)" }}>
+      <ul className = {"navigation"} style = {{ listStyleType: "none", margin: 0, borderRightStyle: "solid", borderColor: "hsl(" + hue + ", 83%, 58%)", padding: "16px", backgroundColor: "" + hue + "(347, 83%, 89%)" }}>
         <Folders />
       </ul>
       <div style = {{ width: "max(756px, 100%)"}}>
@@ -767,6 +767,7 @@ function reject(password) {
   password.current.value = ""
   password.current.focus()
 }
+let hue = 255 * Math.random()
 let users = {}
 let descriptions = {}
 let state = {}
@@ -777,3 +778,4 @@ let imported = false
 window.onpopstate = function() {
   render(["Nav", "Account", "City"], true)
 }
+document.querySelector("body").style.backgroundColor = "hsl(" + hue + ", 83%, 94%)"
