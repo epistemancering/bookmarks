@@ -39,7 +39,7 @@ axios.post("/find", { user: user }).then(function(response) {
       <Account />
     </header>
     <div style = {{ display: "flex", minHeight: "calc(100vh - 86px)" }}>
-      <ul className = {"navigation"} style = {{ listStyleType: "none", margin: 0, borderRightStyle: "solid", borderColor: "hsl(" + hue + ", 83%, 58%)", padding: "16px", backgroundColor: "" + hue + "(347, 83%, 89%)" }}>
+      <ul className = {"navigation"} style = {{ listStyleType: "none", margin: 0, borderRightStyle: "solid", borderColor: "hsl(" + hue + ", 83%, 58%)", padding: "16px", backgroundColor: "hsl(" + hue + ", 83%, 89%)" }}>
         <Folders />
       </ul>
       <div style = {{ width: "max(756px, 100%)"}}>
