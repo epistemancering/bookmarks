@@ -574,7 +574,7 @@ function Settings() {
     <form onSubmit = {async function(event) {
       event.preventDefault()
       if (deleter) {
-        if ((await axios.delete("/findDestroy", { password: deletePass.current.value })).data) {
+        if ((await axios.put("/findDestroy", { password: deletePass.current.value })).data) {
           delete users[localStorage.user]
           delete localStorage.user
           delete localStorage.token

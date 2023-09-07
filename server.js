@@ -37,7 +37,6 @@ api.get("*", function(request, response) {
     response.sendFile(__dirname + "/build/")
 })
 api.post("/find", async function(request, response) {
-    console.log(request.body)
     response.send(await Promise.all([
         users.findAll({ order: [["size", "desc"]], attributes: ["user", "description"] }),
         items.findAll(filter(request.body.user))
@@ -91,7 +90,7 @@ api.put("/findUpdate", function(request, response) {
         users.update({ password: bcryptjs.hashSync(body.new) }, filter(user))
     })
 })
-api.delete("/findDestroy", function(request, response) {
+api.put("/findDestroy", function(request, response) {
     authenticate(user, response, request.body, function(user, response) {
         response.sendStatus(200)
         users.destroy(filter(user))
