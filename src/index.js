@@ -27,7 +27,6 @@ axios.post("/find", { user: user }).then(function(response) {
     window.history.replaceState({}, undefined, "/")
     document.title = "Bookmark City"
   }
-  // fix deletion bug
   reactDom.createRoot(document.querySelector("div")).render(<react.StrictMode>
     <header style = {{ height: "51px", borderBottomStyle: "solid", borderColor: "hsl(" + hue + ", 83%, 58%)", backgroundColor: "hsl(" + hue + ", 83%, 81%)", padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
       <nav>
@@ -85,7 +84,7 @@ function Ancestry() {
           break
         }
       }
-      render(["Ancestry", "Items"], users[window.history.state.user][ancestors[index]], path)
+      render(["Ancestry", "Folders", "Items"], users[window.history.state.user][ancestors[index]], path)
     }} onDragOver = {function(event) {
       onDragOver(event, 0)
     }} onDrop = {function(event) {
@@ -127,10 +126,10 @@ function Account() {
           log out
         </button>
         <button onClick = {function() {
-          overlay = <Settings />
+          overlay = <Manage />
           render(["Overlay"])
         }}>
-          settings
+          manage
         </button>
       </div>
     </div>
@@ -217,12 +216,12 @@ function Folders() {
 function Folder(props) {
   let state = react.useState()
   let folders = []
-  let arrow, folder
+  let arrow, fontWeight, folder
   if (users[props.user][0]) {
     for (let index in users[props.user][props.index].children) {
       if (!users[props.user][index].address) {
         folders[users[props.user][index].order] = <li key = {index}>
-          <Folder user = {props.user} index = {index} path = {props.path + "/" + users[props.user][index].name} />
+          <Folder user = {props.user} index = {Number(index)} path = {props.path + "/" + users[props.user][index].name} />
         </li>
       }
     }
@@ -238,17 +237,22 @@ function Folder(props) {
     arrow = <Arrow state = {state} user = {props.user} index = {props.index} arrow = {">"} />
   }
   if (props.index) {
+    if (props.index === window.history.state.index) {
+      fontWeight = "bold"
+    }
     folder = <button onClick = {function() {
       users[props.user][props.index].open = true
-      render(["Nav", "Account", "City"], users[props.user][props.index], props.path)
-      state[1]({})
-    }} style = {{ width: "100%", textAlign: "left", whiteSpace: "nowrap" }}>
+      render(["Nav", "Account", "Folders", "City"], users[props.user][props.index], props.path)
+    }} style = {{ width: "100%", textAlign: "left", whiteSpace: "nowrap", fontWeight: fontWeight }}>
       {users[props.user][props.index].name}
     </button>
   } else {
+    if (!window.history.state.index && props.user === window.history.state.user) {
+      fontWeight = "bold"
+    }
     folder = <button onClick = {function() {
       onClick(props.user)
-    }} style = {{ width: "100%", textAlign: "left", whiteSpace: "nowrap" }}>
+    }} style = {{ width: "100%", textAlign: "left", whiteSpace: "nowrap", fontWeight: fontWeight }}>
       {props.user}
     </button>
   }
@@ -529,7 +533,7 @@ function Overlay() {
     </>
   }
 }
-function Settings() {
+function Manage() {
   let description = react.useRef()
   let changePass = react.useRef()
   let update = react.useRef()
@@ -776,6 +780,6 @@ axios.defaults.headers.user = localStorage.user
 axios.defaults.headers.token = localStorage.token
 let imported = false
 window.onpopstate = function() {
-  render(["Nav", "Account", "City"], true)
+  render(["Nav", "Account", "Folders", "City"], true)
 }
 document.querySelector("body").style.backgroundColor = "hsl(" + hue + ", 83%, 94%)"
