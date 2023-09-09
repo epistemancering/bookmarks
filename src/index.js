@@ -37,8 +37,8 @@ axios.post("/find", { user: user }).then(function(response) {
       </div>
       <Account />
     </header>
-    <div style = {{ display: "flex", minHeight: "calc(100vh - 86px)" }}>
-      <Folders />
+    <div style = {{ display: "flex" }}>
+      <Panel />
       <div style = {{ width: "max(756px, 100%)"}}>
         <div style = {{ margin: "16px", borderStyle: "solid" }}>
           <City />
@@ -201,19 +201,35 @@ function Account() {
     about Bookmark City
   </button>
 }
+function Panel() {
+  state.Panel = react.useState()
+  if (collapsed) {
+    return <button onClick = {function() {
+      collapsed = undefined
+      render(["Panel"])
+    }} style = {{ position: "absolute", zIndex: 1, top: "93px" }}>
+      &gt;
+    </button>
+  }
+  return <ul className = {"navigation"} style = {{ listStyleType: "none", margin: 0, borderRightStyle: "solid", borderColor: "hsl(" + hue + ", 83%, 58%)", padding: "16px", minHeight: "calc(100vh - 118px)", backgroundColor: "hsl(" + hue + ", 83%, 89%)", position: "relative" }}>
+    <Folders />
+    <button onClick = {function() {
+      collapsed = true
+      render(["Panel"])
+    }} style = {{ position: "absolute", right: "-11px", top: "8px" }}>
+      &lt;
+    </button>
+  </ul>
+}
 function Folders() {
   state.Folders = react.useState()
-  if (folders) {
-    let folders = []
-    for (let index in users) {
-      folders.push(<li key = {index}>
-        <Folder user = {index} index = {0} path = {"/" + index} />
-      </li>)
-    }
-    return <ul className = {"navigation"} style = {{ listStyleType: "none", margin: 0, borderRightStyle: "solid", borderColor: "hsl(" + hue + ", 83%, 58%)", padding: "16px", backgroundColor: "hsl(" + hue + ", 83%, 89%)" }}>
-      {folders}
-    </ul>
+  let folders = []
+  for (let index in users) {
+    folders.push(<li key = {index}>
+      <Folder user = {index} index = {0} path = {"/" + index} />
+    </li>)
   }
+  return folders
 }
 function Folder(props) {
   let state = react.useState()
@@ -777,10 +793,9 @@ let hue = 255 * Math.random()
 let users = {}
 let descriptions = {}
 let state = {}
-let authenticated, search, terms, item, overlay, traveler, high, low, destroying, increment, deleter
+let authenticated, search, terms, collapsed, item, overlay, traveler, high, low, destroying, increment, deleter
 axios.defaults.headers.user = localStorage.user
 axios.defaults.headers.token = localStorage.token
-let folders = true
 let imported = false
 window.onpopstate = function() {
   render(["Nav", "Account", "Folders", "City"], true)
