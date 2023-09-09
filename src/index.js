@@ -38,9 +38,7 @@ axios.post("/find", { user: user }).then(function(response) {
       <Account />
     </header>
     <div style = {{ display: "flex", minHeight: "calc(100vh - 86px)" }}>
-      <ul className = {"navigation"} style = {{ listStyleType: "none", margin: 0, borderRightStyle: "solid", borderColor: "hsl(" + hue + ", 83%, 58%)", padding: "16px", backgroundColor: "hsl(" + hue + ", 83%, 89%)" }}>
-        <Folders />
-      </ul>
+      <Folders />
       <div style = {{ width: "max(756px, 100%)"}}>
         <div style = {{ margin: "16px", borderStyle: "solid" }}>
           <City />
@@ -205,13 +203,17 @@ function Account() {
 }
 function Folders() {
   state.Folders = react.useState()
-  let folders = []
-  for (let index in users) {
-    folders.push(<li key = {index}>
-      <Folder user = {index} index = {0} path = {"/" + index} />
-    </li>)
+  if (folders) {
+    let folders = []
+    for (let index in users) {
+      folders.push(<li key = {index}>
+        <Folder user = {index} index = {0} path = {"/" + index} />
+      </li>)
+    }
+    return <ul className = {"navigation"} style = {{ listStyleType: "none", margin: 0, borderRightStyle: "solid", borderColor: "hsl(" + hue + ", 83%, 58%)", padding: "16px", backgroundColor: "hsl(" + hue + ", 83%, 89%)" }}>
+      {folders}
+    </ul>
   }
-  return folders
 }
 function Folder(props) {
   let state = react.useState()
@@ -778,6 +780,7 @@ let state = {}
 let authenticated, search, terms, item, overlay, traveler, high, low, destroying, increment, deleter
 axios.defaults.headers.user = localStorage.user
 axios.defaults.headers.token = localStorage.token
+let folders = true
 let imported = false
 window.onpopstate = function() {
   render(["Nav", "Account", "Folders", "City"], true)
