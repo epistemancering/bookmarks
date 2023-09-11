@@ -1,6 +1,7 @@
 import react from "react"
 import reactDom from "react-dom/client"
 import axios from "axios"
+// implement private items
 let path = decodeURI(window.location.pathname).split("/")
 let user = path[1].toLowerCase()
 axios.post("/find", { user: user }).then(function(response) {
