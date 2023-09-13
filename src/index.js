@@ -395,17 +395,19 @@ function Items() {
     }
     let button
     if (authenticated) { // implement private items here
-      button = <button onClick = {function() {
-        increment = 0
-        destroying = []
-        destroy(index)
-        axios.put("/destroyIncrement", { destroy: destroying, increment: increment })
-        delete users[window.history.state.user][window.history.state.index].children[index]
-        window.history.replaceState(users[window.history.state.user][window.history.state.index], undefined)
-        render(["Folders", "Items"])
-      }} style = {{ position: "absolute", top: "16px", right: "16px" }}>
-        delete
-      </button>
+      button = <>
+        <button onClick = {function() {
+          increment = 0
+          destroying = []
+          destroy(index)
+          axios.put("/destroyIncrement", { destroy: destroying, increment: increment })
+          delete users[window.history.state.user][window.history.state.index].children[index]
+          window.history.replaceState(users[window.history.state.user][window.history.state.index], undefined)
+          render(["Folders", "Items"])
+        }} style = {{ position: "absolute", top: "16px", right: "16px" }}>
+          delete
+        </button>
+      </>
     }
     items[users[window.history.state.user][index].order] = <div key = {index} style = {{ position: "relative" }}>
       <Content index = {index} />
