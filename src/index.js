@@ -394,7 +394,7 @@ function Items() {
       }
     }
     let button
-    if (authenticated) { //  implement private items here
+    if (authenticated) { //   implement private items here
       button = <>
         <button onClick = {function() {
           increment = 0
